@@ -15,6 +15,9 @@ rm -rf $REPO/public && cp -R Builds/WebGL $REPO/public
 sed -i '' -e 's|<title>.*</title>|<title>빅 투</title>|' \
   -e 's|style.width = "960px"|style.width = "min(96vw, 1280px)"|' \
   -e 's|style.height = "600px"|style.height = "min(86vh, 800px)"|' $REPO/public/index.html
+# 올릴 때마다 파일 주소에 버전을 붙여서 폰이 옛 빌드를 기억하지 않게
+STAMP=$(date +%s)
+sed -i '' -E "s#(\.unityweb|\.loader\.js)\"#\1?v=$STAMP\"#g" $REPO/public/index.html
 
 # 소스
 mkdir -p $REPO/unity
