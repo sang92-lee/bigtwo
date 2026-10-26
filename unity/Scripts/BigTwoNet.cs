@@ -26,7 +26,7 @@ public partial class BigTwoGame
     [DllImport("__Internal")] static extern string NetRoomParam();
     [DllImport("__Internal")] static extern string NetLink(string code);
     [DllImport("__Internal")] static extern void NetCopy(string text);
-    [DllImport("__Internal")] static extern string NetPrompt(string title, string def);
+    [DllImport("__Internal")] static extern void NetAsk(string key, string title, string def);
     static bool Online => true;
 #else
     static void NetInit() { }
@@ -39,7 +39,7 @@ public partial class BigTwoGame
     static string NetRoomParam() => "";
     static string NetLink(string code) => "?room=" + code;
     static void NetCopy(string text) { GUIUtility.systemCopyBuffer = text; }
-    static string NetPrompt(string title, string def) => def;
+    static void NetAsk(string key, string title, string def) { }
     static bool Online => false;
 #endif
 
@@ -69,14 +69,22 @@ public partial class BigTwoGame
         inviteCode = (NetRoomParam() ?? "").Trim().ToUpper();
     }
 
-    string AskName()
+    string pendingJoin = "";
+
+    // 이름이 없으면 입력창을 띄우고 false (입력이 오면 OnNet "ask"에서 이어서 진행)
+    bool HaveName(string then)
     {
-        if (string.IsNullOrWhiteSpace(myName)) myName = NetPrompt("내 이름 (8자까지)", "");
-        myName = (myName ?? "").Trim();
-        if (myName.Length > 8) myName = myName.Substring(0, 8);
-        if (myName == "") myName = "손님" + UnityEngine.Random.Range(10, 99);
+        if (!string.IsNullOrWhiteSpace(myName)) return true;
+        NetAsk(then, "내 이름 (8자까지)", "");
+        return false;
+    }
+
+    void SetName(string v)
+    {
+        v = (v ?? "").Trim();
+        if (v.Length > 8) v = v.Substring(0, 8);
+        myName = v;
         PlayerPrefs.SetString("name", myName);
-        return myName;
     }
 
     // ---------- 방 만들기 / 참가 ----------
@@ -84,11 +92,12 @@ public partial class BigTwoGame
     void CreateRoom()
     {
         if (!Online) { Toast("온라인 방은 웹에서만 돼요"); return; }
+        if (!HaveName("name-create")) return;
         mode = NetMode.Host;
         const string letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
         roomCode = new string(Enumerable.Range(0, 4).Select(_ => letters[rng.Next(letters.Length)]).ToArray());
         players.Clear();
-        players.Add(new Player { name = AskName(), peer = "bigtwo-" + roomCode });
+        players.Add(new Player { name = myName, peer = "bigtwo-" + roomCode });
         lobbySeats = 4;
         phase = Phase.Lobby;
         netStatus = "방 여는 중…";
@@ -100,8 +109,9 @@ public partial class BigTwoGame
     {
         if (!Online) { Toast("온라인 방은 웹에서만 돼요"); return; }
         code = (code ?? "").Trim().ToUpper();
-        if (code.Length != 4) { Toast("방 코드는 4글자예요"); return; }
-        AskName();
+        if (code.Length != 4) { NetAsk("code", "방 코드 4글자", ""); return; }
+        pendingJoin = code;
+        if (!HaveName("name-join")) return;
         mode = NetMode.Client;
         roomCode = code;
         players.Clear();
@@ -164,6 +174,13 @@ public partial class BigTwoGame
             case "leave":
                 if (mode == NetMode.Client) { LeaveRoom("방장이 나갔어요"); break; }
                 OnClientLeft(e.from);
+                break;
+            case "ask":
+                if (e.id == "code") { if (!string.IsNullOrWhiteSpace(e.msg)) JoinRoom(e.msg); break; }
+                if (string.IsNullOrWhiteSpace(e.msg)) break;
+                SetName(e.msg);
+                if (e.id == "name-create") CreateRoom();
+                else if (e.id == "name-join") JoinRoom(pendingJoin);
                 break;
             case "mic":
                 micOn = e.on;

@@ -768,7 +768,8 @@ public partial class BigTwoGame : MonoBehaviour
         float bw = 150, bh = 76, cx = W / 2;
         GUI.Label(new Rect(cx - 330, 318, 160, 50), "내 이름", Style(28, dim, TextAnchor.MiddleRight));
         var field = new GUIStyle(GUI.skin.textField) { font = font, fontSize = 28, alignment = TextAnchor.MiddleCenter, normal = { background = panelTex, textColor = Color.white }, focused = { background = panelTex, textColor = Color.white } };
-        myName = GUI.TextField(new Rect(cx - 150, 318, 300, 50), myName ?? "", 8, field);
+        if (Online) { if (Btn(new Rect(cx - 150, 318, 300, 50), string.IsNullOrWhiteSpace(myName) ? "눌러서 입력" : myName)) NetAsk("name", "내 이름 (8자까지)", myName ?? ""); }
+        else myName = GUI.TextField(new Rect(cx - 150, 318, 300, 50), myName ?? "", 8, field);
         GUI.Label(new Rect(0, 372, W, 34), "봇과 연습할 때 인원", Style(26, dim));
         for (int k = 2; k <= 4; k++)
             if (Btn(new Rect(cx - bw * 1.5f - 15 + (k - 2) * (bw + 15), 410, bw, bh), $"{k}명", true, numPlayers == k)) numPlayers = k;
@@ -782,7 +783,7 @@ public partial class BigTwoGame : MonoBehaviour
         if (Btn(new Rect(cx - 400, 730, 250, 90), "봇과 연습")) NewGame();
         if (Btn(new Rect(cx - 125, 730, 250, 90), "방 만들기", true, inviteCode == "")) CreateRoom();
         if (Btn(new Rect(cx + 150, 730, 250, 90), inviteCode != "" ? $"{inviteCode} 참가" : "코드로 참가", true, inviteCode != ""))
-            JoinRoom(inviteCode != "" ? inviteCode : NetPrompt("방 코드 4글자", ""));
+            JoinRoom(inviteCode);
         if (inviteCode != "") GUI.Label(new Rect(0, 690, W, 34), $"초대받은 방: {inviteCode}", Style(24, new Color(1f, 0.6f, 0.4f)));
         GUI.Label(new Rect(0, 860, W, 80), "9장씩 시작 · 패스하면 더미에서 1장 먹기 · 가장 먼저 다 내면 1등\n나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(22, new Color(0.5f, 0.48f, 0.45f)));
     }
