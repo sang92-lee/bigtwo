@@ -58,6 +58,7 @@ public partial class BigTwoGame
     {
         public string k = "state";
         public int phase, you, turn, lastBy, round, packs, pile, lobbySeats, deal;
+        public float turnTime;
         public bool jokers;
         public float timeLeft;
         public bool hasLast;
@@ -140,9 +141,8 @@ public partial class BigTwoGame
     void StartOnline()
     {
         numPlayers = Mathf.Max(lobbySeats, players.Count);
-        string[] botNames = { "검은 모자", "말 없는 자", "그림자" };
         for (int i = players.Count, b = 0; i < numPlayers; i++, b++)
-            players.Add(new Player { name = botNames[b % 3], bot = true });
+            players.Add(new Player { name = BotNames[b % BotNames.Length], bot = true });
         round = 0;
         PlaceSeats();
         StartRound();
@@ -205,7 +205,7 @@ public partial class BigTwoGame
         int i = players.FindIndex(p => p.peer == from);
         if (m.k == "join")
         {
-            if (phase != Phase.Lobby || players.Count >= 4) { NetSend(from, JsonUtility.ToJson(new Msg { k = "full" })); return; }
+            if (phase != Phase.Lobby || players.Count >= 6) { NetSend(from, JsonUtility.ToJson(new Msg { k = "full" })); return; }
             if (i < 0) players.Add(new Player { name = string.IsNullOrWhiteSpace(m.name) ? "손님" : m.name, peer = from });
             lobbySeats = Mathf.Max(lobbySeats, players.Count);
             sfx.PlayOneShot(turnClip, 0.5f);
@@ -254,7 +254,7 @@ public partial class BigTwoGame
     View ViewFor(int i) => new View
     {
         phase = (int)phase, you = i, turn = turn, lastBy = lastBy, round = round, packs = packs, pile = drawPile.Count,
-        lobbySeats = lobbySeats, deal = dealCount, jokers = jokers, timeLeft = Mathf.Max(0, turnEnd - Time.time), hasLast = lastCombo != null,
+        lobbySeats = lobbySeats, deal = dealCount, jokers = jokers, turnTime = TurnTime, timeLeft = Mathf.Max(0, turnEnd - Time.time), hasLast = lastCombo != null,
         lastText = lastText, room = roomCode,
         names = players.Select(p => p.name).ToArray(),
         peers = players.Select(p => p.peer ?? "").ToArray(),
@@ -289,7 +289,7 @@ public partial class BigTwoGame
             players.Add(p);
         }
         phase = (Phase)v.phase;
-        packs = v.packs; round = v.round; lobbySeats = v.lobbySeats; dealCount = v.deal; jokers = v.jokers;
+        packs = v.packs; round = v.round; lobbySeats = v.lobbySeats; dealCount = v.deal; jokers = v.jokers; TurnTime = v.turnTime > 0 ? v.turnTime : 60;
         numPlayers = n;
         PlaceSeats();
         turn = R(v.turn); lastBy = R(v.lastBy);
@@ -340,30 +340,30 @@ public partial class BigTwoGame
         GUI.Label(new Rect(0, 165, W, 90), roomCode, Style(80, new Color(0.95f, 0.55f, 0.4f), TextAnchor.MiddleCenter, FontStyle.Bold));
         if (Btn(new Rect(cx - 130, 262, 260, 60), "초대 링크 복사")) { NetCopy(NetLink(roomCode)); Toast("링크를 복사했어요"); }
 
-        GUI.Label(new Rect(0, 340, W, 36), netStatus != "" ? netStatus : $"들어온 사람 {players.Count}/4", Style(26, dim));
-        for (int i = 0; i < 4; i++)
+        GUI.Label(new Rect(0, 340, W, 36), netStatus != "" ? netStatus : $"들어온 사람 {players.Count}/6", Style(26, dim));
+        for (int i = 0; i < 6; i++) // 두 줄로 3명씩
         {
             string line = i < players.Count
                 ? players[i].name + (i == 0 && mode == NetMode.Host ? "  (나·방장)" : i == 0 ? "  (나)" : players[i].peer == "bigtwo-" + roomCode ? "  (방장)" : "")
                 : "대기 중…";
-            GUI.Label(new Rect(0, 382 + i * 40, W, 38), line, Style(28, i < players.Count ? Color.white : new Color(0.45f, 0.43f, 0.4f)));
+            GUI.Label(new Rect(cx - 380 + (i % 2) * 380, 382 + (i / 2) * 42, 380, 40), line, Style(26, i < players.Count ? Color.white : new Color(0.45f, 0.43f, 0.4f)));
         }
 
         if (mode == NetMode.Host)
         {
             float bw = 120, bh = 60;
-            GUI.Label(new Rect(cx - 380, 560, 160, bh), "자리", Style(24, dim, TextAnchor.MiddleRight));
-            for (int k = 2; k <= 4; k++)
-                if (Btn(new Rect(cx - 210 + (k - 2) * (bw + 10), 560, bw, bh), $"{k}명", k >= players.Count, lobbySeats == k)) { lobbySeats = k; Sync(); }
-            if (OptionRows(cx, 628, true)) Sync();
+            GUI.Label(new Rect(cx - 380, 520, 160, bh), "자리", Style(24, dim, TextAnchor.MiddleRight));
+            for (int k = 2; k <= 6; k++)
+                if (Btn(new Rect(cx - 210 + (k - 2) * 112, 520, 104, bh), $"{k}명", k >= players.Count, lobbySeats == k)) { lobbySeats = k; Sync(); }
+            if (OptionRows(cx, 592, true, lobbySeats)) Sync();
             int bots = Mathf.Max(0, lobbySeats - players.Count);
-            GUI.Label(new Rect(0, 800, W, 30), bots > 0 ? $"빈자리 {bots}개는 봇이 앉아요" : "자리가 다 찼어요", Style(22, new Color(0.55f, 0.52f, 0.5f)));
+            GUI.Label(new Rect(0, 822, W, 30), bots > 0 ? $"빈자리 {bots}개는 봇이 앉아요" : "자리가 다 찼어요", Style(22, new Color(0.55f, 0.52f, 0.5f)));
             if (Btn(new Rect(cx + 170, 862, 200, 64), "시작", true, true)) StartOnline();
         }
         else
         {
-            GUI.Label(new Rect(0, 570, W, 40), $"방장이 시작하기를 기다리는 중… ({lobbySeats}명)", Style(26, dim));
-            OptionRows(cx, 628, false); // 방장이 고른 옵션 보기만
+            GUI.Label(new Rect(0, 525, W, 40), $"방장이 시작하기를 기다리는 중… ({lobbySeats}명)", Style(26, dim));
+            OptionRows(cx, 592, false, lobbySeats); // 방장이 고른 옵션 보기만
         }
 
         if (Btn(new Rect(cx - 370, 862, 160, 64), "나가기")) LeaveRoom();

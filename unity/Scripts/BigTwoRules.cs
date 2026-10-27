@@ -19,7 +19,7 @@ public class Card
 
 public class Combo
 {
-    public int type; // 장수: 1, 2, 3, 5
+    public int type; // 장수: 1, 2, 3, 4(투페어), 5
     public int cat;  // 5장: 1 스트레이트, 2 플러시, 3 풀하우스, 4 포카드, 5 스트레이트 플러시, 6 파이브카드
     public int key;
     public string name;
@@ -63,6 +63,13 @@ public static class Rules
         if (n == 1) return new Combo { type = 1, key = hi, name = "싱글" };
         if (n == 2 && same) return new Combo { type = 2, key = hi, name = "페어" };
         if (n == 3 && same && !c[0].Joker) return new Combo { type = 3, key = hi, name = "트리플" };
+        if (n == 4 && !c.Any(x => x.Joker))
+        {
+            // 투페어: 서로 다른 숫자 페어 두 개. 높은 페어의 센 카드로 비교
+            var g4 = c.GroupBy(x => x.r).ToList();
+            if (g4.Count == 2 && g4.All(g => g.Count() == 2)) return new Combo { type = 4, key = hi, name = "투페어" };
+            return null;
+        }
         if (n != 5 || c.Any(x => x.Joker)) return null;
 
         if (same) return new Combo { type = 5, cat = 6, key = hi, name = "파이브카드" };
@@ -106,6 +113,7 @@ public static class Rules
                 foreach (var pick in Subsets(g, last.type)) Mark(pick);
             return ok;
         }
+        if (last.type == 4) { foreach (var m in Moves(hand, last)) foreach (var c in m) ok.Add(c.id); return ok; }
 
         // 5장: 각 카드마다 "이 카드 + 나머지는 가장 센 카드"로 이길 수 있는지 본다
         Card Top(int r, Card not = null) => byRank[r].Where(x => x != not).LastOrDefault();
@@ -181,6 +189,16 @@ public static class Rules
         {
             if (want(2)) all.AddRange(Subsets(g, 2).Take(12));
             if (want(3)) all.AddRange(Subsets(g, 3).Take(12));
+        }
+        if (want(4))
+        {
+            var pairs = byRank.Where(kv => kv.Key < 13 && kv.Value.Count >= 2).Select(kv => kv.Value).ToList();
+            for (int i = 0; i < pairs.Count; i++)
+                for (int j = i + 1; j < pairs.Count; j++)
+                {
+                    all.Add(pairs[i].Take(2).Concat(pairs[j].Take(2)).ToList());
+                    all.Add(pairs[i].Skip(pairs[i].Count - 2).Concat(pairs[j].Skip(pairs[j].Count - 2)).ToList());
+                }
         }
         if (want(5))
         {
@@ -264,6 +282,7 @@ public static class Rules
             }
             return null;
         }
+        if (last.type == 4) return Moves(hand, last).OrderBy(m => Eval(m).key).FirstOrDefault();
         // 5장: 스트레이트, 풀하우스, 포카드 순으로 찾아본다
         List<Card> best = null; Combo bestC = null;
         void Try(List<Card> pick)

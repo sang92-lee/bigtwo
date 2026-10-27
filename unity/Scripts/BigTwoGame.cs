@@ -37,10 +37,13 @@ public partial class BigTwoGame : MonoBehaviour
 
     Phase phase = Phase.Menu;
     int numPlayers = 4, packs = 1;
+    static readonly string[] BotNames = { "검은 모자", "말 없는 자", "그림자", "외눈", "늙은 손" };
     string myName;
     bool installable; // 아직 앱으로 설치 안 한 브라우저면 "홈 화면에 추가" 버튼
     readonly List<Player> players = new List<Player>();
-    readonly Seat[] seats = new Seat[4];
+    readonly Seat[] seats = new Seat[6];
+    Transform tableWood, tableFelt;
+    Light lamp;
     int turn, lastBy = -1, passes, round;
     Combo lastCombo;
     List<Card> lastCards = new List<Card>();
@@ -52,7 +55,7 @@ public partial class BigTwoGame : MonoBehaviour
     float toastUntil, botTimer;
     readonly HashSet<int> selected = new HashSet<int>();
     HashSet<int> playable = new HashSet<int>();
-    const float TurnTime = 60f; // 내 턴 제한 시간 (최대 1분)
+    float TurnTime = 60f; // 방 옵션: 생각 시간 (15/30/60초)
     float turnEnd;
     int lastTick;
     List<Result> results;
@@ -128,12 +131,12 @@ public partial class BigTwoGame : MonoBehaviour
         // 원탁: 짙은 초록 펠트 + 검은 나무 테두리
         var felt = Mat(new Color(0.06f, 0.3f, 0.16f), 0.05f);
         var wood = Mat(new Color(0.09f, 0.05f, 0.03f), 0.5f);
-        Prim(PrimitiveType.Cylinder, new Vector3(0, 0.74f, 0), new Vector3(2.9f, 0.035f, 2.9f), wood);
-        Prim(PrimitiveType.Cylinder, new Vector3(0, 0.765f, 0), new Vector3(2.7f, 0.02f, 2.7f), felt);
+        tableWood = Prim(PrimitiveType.Cylinder, new Vector3(0, 0.74f, 0), new Vector3(2.9f, 0.035f, 2.9f), wood).transform;
+        tableFelt = Prim(PrimitiveType.Cylinder, new Vector3(0, 0.765f, 0), new Vector3(2.7f, 0.02f, 2.7f), felt).transform;
         Prim(PrimitiveType.Cylinder, new Vector3(0, 0.37f, 0), new Vector3(0.35f, 0.37f, 0.35f), wood);
 
         // 테이블 위에 매달린 전등 하나만
-        var lamp = new GameObject("Lamp").AddComponent<Light>();
+        lamp = new GameObject("Lamp").AddComponent<Light>();
         lamp.type = LightType.Spot;
         lamp.transform.position = new Vector3(0, 3.1f, 0);
         lamp.transform.rotation = Quaternion.Euler(90, 0, 0);
@@ -169,7 +172,7 @@ public partial class BigTwoGame : MonoBehaviour
         back.color = new Color(0.55f, 0.12f, 0.1f);
 
         blackMat = Mat(new Color(0.008f, 0.008f, 0.01f), 0.35f);
-        for (int i = 0; i < 4; i++) seats[i] = MakeSeat();
+        for (int i = 0; i < seats.Length; i++) seats[i] = MakeSeat();
     }
 
     Light candle;
@@ -230,6 +233,11 @@ public partial class BigTwoGame : MonoBehaviour
     void PlaceSeats()
     {
         foreach (var s in seats) s.root.SetActive(false);
+        // 5~6명이면 옆으로 긴 타원 탁자
+        float rx = numPlayers >= 5 && !portrait ? 1.45f : 1f; // 세로 폰 화면은 둥근 탁자 반원이 더 잘 보임
+        tableWood.localScale = new Vector3(2.9f * rx, 0.035f, 2.9f);
+        tableFelt.localScale = new Vector3(2.7f * rx, 0.02f, 2.7f);
+        lamp.spotAngle = numPlayers >= 5 ? 80 : 62;
         for (int k = 1; k < numPlayers; k++)
         {
             var s = seats[k];
@@ -238,8 +246,9 @@ public partial class BigTwoGame : MonoBehaviour
                 : numPlayers == 2 ? 0f : Mathf.Lerp(-62f, 62f, (k - 1) / (float)(numPlayers - 2));
             float a = deg * Mathf.Deg2Rad;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-            s.root.transform.position = dir * 1.75f;
-            s.root.transform.rotation = Quaternion.LookRotation(-dir);
+            s.root.transform.position = new Vector3(dir.x * 1.75f * rx, 0, dir.z * 1.75f);
+            var face = new Vector3(dir.x / rx, 0, dir.z * rx).normalized; // 타원에서도 탁자 가운데를 보게
+            s.root.transform.rotation = Quaternion.LookRotation(-face);
             s.root.SetActive(true);
             players[k].seat = s;
         }
@@ -368,8 +377,7 @@ public partial class BigTwoGame : MonoBehaviour
         players.Clear();
         players.Add(new Player { name = string.IsNullOrWhiteSpace(myName) ? "나" : myName.Trim() });
         PlayerPrefs.SetString("name", myName);
-        string[] botNames = { "검은 모자", "말 없는 자", "그림자" };
-        for (int i = 1; i < numPlayers; i++) players.Add(new Player { name = botNames[i - 1], bot = true });
+        for (int i = 1; i < numPlayers; i++) players.Add(new Player { name = BotNames[i - 1], bot = true });
         round = 0;
         PlaceSeats();
         StartRound();
@@ -640,7 +648,7 @@ public partial class BigTwoGame : MonoBehaviour
         bool p = aspect < 0.95f;
         if (p != portrait) { portrait = p; if (players.Count > 1 && phase != Phase.Menu) PlaceSeats(); }
         // 카메라는 원래 자리 근처에 두고(세로 화면만 살짝 뒤로), 앉은 사람 어깨가 딱 들어오는 만큼만 시야를 넓힌다
-        float back = aspect < 1f ? (1f - aspect) * 0.5f : 0;
+        float back = (aspect < 1f ? (1f - aspect) * 0.5f : 0) + (numPlayers >= 5 && phase != Phase.Menu ? 0.8f : 0); // 5~6명은 내 양옆이 가까워서 한 발 뒤로
         var pos = new Vector3(0, 1.85f + back * 0.4f, -2.25f - back);
         cam.transform.position = pos;
         cam.transform.LookAt(new Vector3(0, 0.82f, 0.25f));
@@ -882,15 +890,15 @@ public partial class BigTwoGame : MonoBehaviour
         if (Online) { if (Btn(new Rect(cx - 150, 318, 300, 50), string.IsNullOrWhiteSpace(myName) ? "눌러서 입력" : myName)) NetAsk("name", "내 이름 (8자까지)", myName ?? ""); }
         else myName = GUI.TextField(new Rect(cx - 150, 318, 300, 50), myName ?? "", 8, field);
         GUI.Label(new Rect(0, 372, W, 34), "봇과 연습할 때 인원", Style(26, dim));
-        for (int k = 2; k <= 4; k++)
-            if (Btn(new Rect(cx - bw * 1.5f - 15 + (k - 2) * (bw + 15), 410, bw, bh), $"{k}명", true, numPlayers == k)) numPlayers = k;
+        for (int k = 2; k <= 6; k++)
+            if (Btn(new Rect(cx - 325 + (k - 2) * 130, 410, 120, 66), $"{k}명", true, numPlayers == k)) numPlayers = k;
 
-        OptionRows(cx, 500, true);
+        OptionRows(cx, 492, true, numPlayers);
 
         // 혼자 연습 / 친구와 온라인 방
-        if (Btn(new Rect(cx - 400, 730, 250, 90), "봇과 연습")) NewGame();
-        if (Btn(new Rect(cx - 125, 730, 250, 90), "방 만들기", true, inviteCode == "")) CreateRoom();
-        if (Btn(new Rect(cx + 150, 730, 250, 90), inviteCode != "" ? $"{inviteCode} 참가" : "코드로 참가", true, inviteCode != ""))
+        if (Btn(new Rect(cx - 400, 748, 250, 86), "봇과 연습")) NewGame();
+        if (Btn(new Rect(cx - 125, 748, 250, 86), "방 만들기", true, inviteCode == "")) CreateRoom();
+        if (Btn(new Rect(cx + 150, 748, 250, 86), inviteCode != "" ? $"{inviteCode} 참가" : "코드로 참가", true, inviteCode != ""))
             JoinRoom(inviteCode);
         if (Online && Btn(new Rect(20, 18, 150, 50), "새로고침")) NetReload(); // 폰에서 당겨서 새로고침이 안 돼서
         if (Online && installable && Btn(new Rect(180, 18, 210, 50), "홈 화면에 추가", true, true)) NetInstall();
@@ -899,7 +907,7 @@ public partial class BigTwoGame : MonoBehaviour
     }
 
     // 카드 옵션 두 줄: [1팩][2팩][조커] / [7장][9장][13장]. edit=false면 보기만
-    bool OptionRows(float cx, float y, bool edit)
+    bool OptionRows(float cx, float y, bool edit, int seatsN)
     {
         var dim = new Color(0.72f, 0.68f, 0.62f);
         float bw = 120, bh = 58, gap = 10;
@@ -913,8 +921,14 @@ public partial class BigTwoGame : MonoBehaviour
         int[] deals = { 7, 9, 13 };
         for (int k = 0; k < 3; k++)
             if (Btn(new Rect(cx - 195 + k * (bw + gap), y, bw, bh), $"{deals[k]}장", edit, dealCount == deals[k])) { dealCount = deals[k]; changed = true; }
-        int total = packs * (jokers ? 54 : 52);
-        GUI.Label(new Rect(0, y + bh + 6, cx * 2, 30), $"카드 {total}장 · 처음 {dealCount}장씩 · 남는 카드는 더미", Style(20, new Color(0.5f, 0.48f, 0.45f)));
+        y += bh + 14;
+        GUI.Label(new Rect(cx - 330, y, 120, bh), "생각", Style(24, dim, TextAnchor.MiddleRight));
+        int[] secs = { 15, 30, 60 };
+        for (int k = 0; k < 3; k++)
+            if (Btn(new Rect(cx - 195 + k * (bw + gap), y, bw, bh), $"{secs[k]}초", edit, Mathf.RoundToInt(TurnTime) == secs[k])) { TurnTime = secs[k]; changed = true; }
+        int total = packs * (jokers ? 54 : 52), deal = Mathf.Min(dealCount, total / Mathf.Max(2, seatsN));
+        string note = deal < dealCount ? $" · {seatsN}명이라 {deal}장씩만 (2팩 추천)" : "";
+        GUI.Label(new Rect(0, y + bh + 6, cx * 2, 30), $"카드 {total}장 · 처음 {deal}장씩 · 남는 카드는 더미{note}", Style(20, deal < dealCount ? new Color(1f, 0.6f, 0.4f) : new Color(0.5f, 0.48f, 0.45f)));
         return changed;
     }
 
