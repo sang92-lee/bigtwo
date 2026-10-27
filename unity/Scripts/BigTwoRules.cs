@@ -203,16 +203,16 @@ public static class Rules
         // 이름과 성격을 짝지은 봇들 (게임 내내 그 성격)
         public static List<Persona> Cast() => new List<Persona>
         {
-            new Persona { name = "올인 이씨", dump = 2.2f, save = 0.2f, block = 1.5f, passBias = 0f, noise = 1f,
-                playLines = new[] { "다 받아라!", "아끼면 뭐해", "털자 털어", "가즈아" }, passLines = new[] { "...없네", "칫" } },
-            new Persona { name = "짠돌이 김씨", dump = 0.8f, save = 2.6f, block = 1f, passBias = 0.15f, noise = 0.8f,
-                playLines = new[] { "이 정도면 됐지", "2는 안 써", "아껴야 잘 살지" }, passLines = new[] { "패스. 아껴둬야지", "공짜 카드 감사" } },
-            new Persona { name = "패 모으는 할매", hoard = true, dump = 1.4f, save = 1.6f, block = 1f, passBias = 0.2f, noise = 1f,
-                playLines = new[] { "옛다", "할매 아직 안 죽었다", "모은 거 푼다" }, passLines = new[] { "한 장 더 주게", "패스~ 모으는 중", "용 한번 보자" } },
-            new Persona { name = "길막 최", dump = 1f, save = 1f, block = 2.6f, passBias = 0.05f, noise = 0.9f,
-                playLines = new[] { "어딜 나가", "못 지나간다", "막는다" }, passLines = new[] { "흠…", "다음엔 막는다" } },
-            new Persona { name = "무지성 박", dump = 1f, save = 0.5f, block = 0.8f, passBias = 0.12f, noise = 3.5f,
-                playLines = new[] { "아무거나!", "느낌 왔다", "ㅋㅋ", "이거 맞나?" }, passLines = new[] { "몰라 패스", "졸려" } },
+            new Persona { name = "칼퇴의 신 이대리", dump = 2.2f, save = 0.2f, block = 1.5f, passBias = 0f, noise = 1f,
+                playLines = new[] { "빨리 끝내고 퇴근하자", "다 받아라 나 6시 칼퇴", "가즈아", "아 야근각…" }, passLines = new[] { "부장님 몰래 패스", "...칼퇴 실패" } },
+            new Persona { name = "2만 품는 사나이", dump = 0.8f, save = 2.6f, block = 1f, passBias = 0.15f, noise = 0.8f,
+                playLines = new[] { "내 2는 결혼할 거야", "2는 절대 안 놔줘", "이 정도면 됐지" }, passLines = new[] { "2 지켰다…", "공짜 카드 개이득" } },
+            new Persona { name = "용을 기다리는 할매", hoard = true, dump = 1.4f, save = 1.6f, block = 1f, passBias = 0.2f, noise = 1f,
+                playLines = new[] { "옛다 사탕이나 먹어라", "할매 아직 정정하다", "손주들 보고 있냐" }, passLines = new[] { "한 장 더 주게", "용 기다린 지 60년", "모으는 중이여" } },
+            new Persona { name = "결재 반려왕 최부장", dump = 1f, save = 1f, block = 2.6f, passBias = 0.05f, noise = 0.9f,
+                playLines = new[] { "어딜 나가 회의 중인데", "결재 반려", "못 지나간다" }, passLines = new[] { "이건 다음 분기에", "흠… 보류" } },
+            new Persona { name = "광 파는 삼촌", dump = 1f, save = 0.5f, block = 0.8f, passBias = 0.12f, noise = 3.5f,
+                playLines = new[] { "이거 고스톱 아니야?", "느낌 왔다", "ㅋㅋ 이거 맞나?", "광 팔게" }, passLines = new[] { "몰라 패스", "삼촌 화장실 좀" } },
         };
 
         public static Persona Random(System.Random rng) => new Persona
