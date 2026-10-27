@@ -43,7 +43,8 @@ public partial class BigTwoGame : MonoBehaviour
     Combo lastCombo;
     List<Card> lastCards = new List<Card>();
     List<Card> drawPile = new List<Card>(); // 처음 13장씩 나누고 남은 카드. 패스하면 1장 먹기
-    const int DealCount = 13;
+    int dealCount = 13;  // 방 옵션: 처음 나눠 줄 장수
+    bool jokers = true; // 방 옵션: 조커 넣기
     Transform pileStack;
     string lastText = "", toast = "";
     float toastUntil, botTimer;
@@ -374,11 +375,12 @@ public partial class BigTwoGame : MonoBehaviour
     void StartRound()
     {
         round++;
-        var deck = Rules.MakeDeck(packs);
+        var deck = Rules.MakeDeck(packs, jokers);
+        int deal = Mathf.Min(dealCount, deck.Count / numPlayers);
         Rules.Shuffle(deck, rng);
         for (int i = 0; i < numPlayers; i++)
-            players[i].hand = deck.Skip(i * DealCount).Take(DealCount).OrderBy(c => c.Val).ToList();
-        drawPile = deck.Skip(numPlayers * DealCount).ToList();
+            players[i].hand = deck.Skip(i * deal).Take(deal).OrderBy(c => c.Val).ToList();
+        drawPile = deck.Skip(numPlayers * deal).ToList();
 
         // 가장 낮은 카드(보통 ♦3)를 가진 사람이 먼저
         int first = 0, best = int.MaxValue;
@@ -875,10 +877,7 @@ public partial class BigTwoGame : MonoBehaviour
         for (int k = 2; k <= 4; k++)
             if (Btn(new Rect(cx - bw * 1.5f - 15 + (k - 2) * (bw + 15), 410, bw, bh), $"{k}명", true, numPlayers == k)) numPlayers = k;
 
-        GUI.Label(new Rect(0, 520, W, 40), "카드", Style(28, dim));
-        for (int k = 1; k <= 2; k++)
-            if (Btn(new Rect(cx - bw - 8 + (k - 1) * (bw + 15), 570, bw, bh), $"{k}팩", true, packs == k)) packs = k;
-        GUI.Label(new Rect(0, 655, W, 34), packs == 1 ? "54장 (조커 2장 포함)" : "108장 (조커 4장 포함)", Style(22, new Color(0.5f, 0.48f, 0.45f)));
+        OptionRows(cx, 500, true);
 
         // 혼자 연습 / 친구와 온라인 방
         if (Btn(new Rect(cx - 400, 730, 250, 90), "봇과 연습")) NewGame();
@@ -887,7 +886,27 @@ public partial class BigTwoGame : MonoBehaviour
             JoinRoom(inviteCode);
         if (Online && Btn(new Rect(20, 18, 150, 50), "새로고침")) NetReload(); // 폰에서 당겨서 새로고침이 안 돼서
         if (inviteCode != "") GUI.Label(new Rect(0, 690, W, 34), $"초대받은 방: {inviteCode}", Style(24, new Color(1f, 0.6f, 0.4f)));
-        GUI.Label(new Rect(0, 860, W, 80), "13장씩 시작 · 패스하면 더미에서 1장 먹기 · ♠2가 조커보다 높은 최강 카드\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
+        GUI.Label(new Rect(0, 860, W, 80), "무늬 ♣ < ♥ < ♦ < ♠ · ♠2가 조커보다 높은 최강 카드 · 패스하면 더미에서 1장 먹기\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
+    }
+
+    // 카드 옵션 두 줄: [1팩][2팩][조커] / [7장][9장][13장]. edit=false면 보기만
+    bool OptionRows(float cx, float y, bool edit)
+    {
+        var dim = new Color(0.72f, 0.68f, 0.62f);
+        float bw = 120, bh = 58, gap = 10;
+        bool changed = false;
+        GUI.Label(new Rect(cx - 330, y, 120, bh), "카드", Style(24, dim, TextAnchor.MiddleRight));
+        for (int k = 1; k <= 2; k++)
+            if (Btn(new Rect(cx - 195 + (k - 1) * (bw + gap), y, bw, bh), $"{k}팩", edit, packs == k)) { packs = k; changed = true; }
+        if (Btn(new Rect(cx - 195 + 2 * (bw + gap), y, bw + 20, bh), jokers ? "조커 O" : "조커 X", edit, jokers)) { jokers = !jokers; changed = true; }
+        y += bh + 14;
+        GUI.Label(new Rect(cx - 330, y, 120, bh), "처음", Style(24, dim, TextAnchor.MiddleRight));
+        int[] deals = { 7, 9, 13 };
+        for (int k = 0; k < 3; k++)
+            if (Btn(new Rect(cx - 195 + k * (bw + gap), y, bw, bh), $"{deals[k]}장", edit, dealCount == deals[k])) { dealCount = deals[k]; changed = true; }
+        int total = packs * (jokers ? 54 : 52);
+        GUI.Label(new Rect(0, y + bh + 6, cx * 2, 30), $"카드 {total}장 · 처음 {dealCount}장씩 · 남는 카드는 더미", Style(20, new Color(0.5f, 0.48f, 0.45f)));
+        return changed;
     }
 
     void DrawEnd(float W)

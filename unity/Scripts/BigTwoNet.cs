@@ -53,7 +53,8 @@ public partial class BigTwoGame
     class View
     {
         public string k = "state";
-        public int phase, you, turn, lastBy, round, packs, pile, lobbySeats;
+        public int phase, you, turn, lastBy, round, packs, pile, lobbySeats, deal;
+        public bool jokers;
         public float timeLeft;
         public bool hasLast;
         public string lastText, room;
@@ -249,7 +250,7 @@ public partial class BigTwoGame
     View ViewFor(int i) => new View
     {
         phase = (int)phase, you = i, turn = turn, lastBy = lastBy, round = round, packs = packs, pile = drawPile.Count,
-        lobbySeats = lobbySeats, timeLeft = Mathf.Max(0, turnEnd - Time.time), hasLast = lastCombo != null,
+        lobbySeats = lobbySeats, deal = dealCount, jokers = jokers, timeLeft = Mathf.Max(0, turnEnd - Time.time), hasLast = lastCombo != null,
         lastText = lastText, room = roomCode,
         names = players.Select(p => p.name).ToArray(),
         peers = players.Select(p => p.peer ?? "").ToArray(),
@@ -284,7 +285,7 @@ public partial class BigTwoGame
             players.Add(p);
         }
         phase = (Phase)v.phase;
-        packs = v.packs; round = v.round; lobbySeats = v.lobbySeats;
+        packs = v.packs; round = v.round; lobbySeats = v.lobbySeats; dealCount = v.deal; jokers = v.jokers;
         numPlayers = n;
         PlaceSeats();
         turn = R(v.turn); lastBy = R(v.lastBy);
@@ -350,17 +351,18 @@ public partial class BigTwoGame
             GUI.Label(new Rect(cx - 380, 560, 160, bh), "자리", Style(24, dim, TextAnchor.MiddleRight));
             for (int k = 2; k <= 4; k++)
                 if (Btn(new Rect(cx - 210 + (k - 2) * (bw + 10), 560, bw, bh), $"{k}명", k >= players.Count, lobbySeats == k)) { lobbySeats = k; Sync(); }
-            GUI.Label(new Rect(cx - 380, 630, 160, bh), "카드", Style(24, dim, TextAnchor.MiddleRight));
-            for (int k = 1; k <= 2; k++)
-                if (Btn(new Rect(cx - 210 + (k - 1) * (bw + 10), 630, bw, bh), $"{k}팩", true, packs == k)) { packs = k; Sync(); }
+            if (OptionRows(cx, 628, true)) Sync();
             int bots = Mathf.Max(0, lobbySeats - players.Count);
-            GUI.Label(new Rect(0, 700, W, 30), bots > 0 ? $"빈자리 {bots}개는 봇이 앉아요" : "자리가 다 찼어요", Style(22, new Color(0.55f, 0.52f, 0.5f)));
-            if (Btn(new Rect(cx - 150, 740, 300, 84), "시작", true, true)) StartOnline();
+            GUI.Label(new Rect(0, 800, W, 30), bots > 0 ? $"빈자리 {bots}개는 봇이 앉아요" : "자리가 다 찼어요", Style(22, new Color(0.55f, 0.52f, 0.5f)));
+            if (Btn(new Rect(cx + 170, 862, 200, 64), "시작", true, true)) StartOnline();
         }
         else
-            GUI.Label(new Rect(0, 600, W, 80), $"방장이 시작하기를 기다리는 중…\n{lobbySeats}명 · 카드 {packs}팩", Style(26, dim));
+        {
+            GUI.Label(new Rect(0, 570, W, 40), $"방장이 시작하기를 기다리는 중… ({lobbySeats}명)", Style(26, dim));
+            OptionRows(cx, 628, false); // 방장이 고른 옵션 보기만
+        }
 
-        if (Btn(new Rect(cx - 150, 860, 140, 60), "나가기")) LeaveRoom();
-        if (Btn(new Rect(cx + 10, 860, 140, 60), micOn ? "마이크 끄기" : "마이크 켜기", true, micOn)) NetMic(!micOn);
+        if (Btn(new Rect(cx - 370, 862, 160, 64), "나가기")) LeaveRoom();
+        if (Btn(new Rect(cx - 190, 862, 180, 64), micOn ? "마이크 끄기" : "마이크 켜기", true, micOn)) NetMic(!micOn);
     }
 }
