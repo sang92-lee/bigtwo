@@ -6,7 +6,7 @@ public class Card
 {
     public int id, r, s; // r: 0=3 … 11=A, 12=2, 13=조커 / s: 0♦ 1♣ 2♥ 3♠
     public bool Joker => r == 13;
-    public int Val => r * 4 + s;
+    public int Val => r == 12 && s == 3 ? 62 : r * 4 + s; // ♠2는 조커보다도 높은 최강 카드
     public bool Heavy => r >= 12; // 2나 조커: 남으면 점수 ×2
 
     static readonly string[] Ranks = { "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2" };

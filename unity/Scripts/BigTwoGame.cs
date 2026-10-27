@@ -229,7 +229,10 @@ public partial class BigTwoGame : MonoBehaviour
         for (int k = 1; k < numPlayers; k++)
         {
             var s = seats[k];
-            float a = (180f + k * 360f / numPlayers) * Mathf.Deg2Rad;
+            // 가로 화면: 원탁에 고르게. 세로(폰) 화면: 맞은편 반원에 모아 앉혀서 화면 밖으로 안 나가게
+            float deg = !portrait ? 180f + k * 360f / numPlayers
+                : numPlayers == 2 ? 0f : Mathf.Lerp(-62f, 62f, (k - 1) / (float)(numPlayers - 2));
+            float a = deg * Mathf.Deg2Rad;
             var dir = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
             s.root.transform.position = dir * 1.75f;
             s.root.transform.rotation = Quaternion.LookRotation(-dir);
@@ -545,8 +548,8 @@ public partial class BigTwoGame : MonoBehaviour
     Vector2 PileOnScreen()
     {
         var p = cam.WorldToScreenPoint(new Vector3(0.72f, 0.8f, -0.15f));
-        float sc = Screen.height / 1000f;
-        return new Vector2(p.x / sc, (Screen.height - p.y) / sc);
+        float sc = UiScale;
+        return new Vector2(p.x / sc, (Screen.height - p.y - (Screen.height - 1000 * sc) / 2) / sc);
     }
 
     // ---------- 카드 내는 연출 ----------
@@ -619,9 +622,13 @@ public partial class BigTwoGame : MonoBehaviour
 
     // 화면 비율이 어떻든 양옆 자리까지 들어오게: 가로로 ±2.2m가 보이도록 시야를 맞추고,
     // 세로로 긴 폰에서는 카메라를 뒤·위로 뺀다
+    bool portrait;
+
     void FitCamera()
     {
         float aspect = Mathf.Max(0.3f, cam.aspect);
+        bool p = aspect < 0.95f;
+        if (p != portrait) { portrait = p; if (players.Count > 1 && phase != Phase.Menu) PlaceSeats(); }
         float back = aspect < 1.2f ? (1.2f - aspect) * 2.2f : 0;
         var pos = new Vector3(0, 1.85f + back * 0.45f, -2.25f - back);
         cam.transform.position = pos;
@@ -635,7 +642,10 @@ public partial class BigTwoGame : MonoBehaviour
 
     // ---------- 화면 (OnGUI, 가상 높이 1000 기준) ----------
 
-    float VW => Screen.width / (Screen.height / 1000f);
+    // 폭이 좁은 폰에서도 메뉴가 안 잘리게: 가상 화면은 최소 900 x 1000
+    float UiScale => Mathf.Min(Screen.height / 1000f, Screen.width / 900f);
+    float VW => Screen.width / UiScale;
+    float ExtraBottom => (Screen.height / UiScale - 1000) / 2; // 세로로 남는 공간의 절반
     GUIStyle Style(int size, Color color, TextAnchor anchor = TextAnchor.MiddleCenter, FontStyle fs = FontStyle.Normal)
         => new GUIStyle(GUI.skin.label) { font = font, fontSize = size, alignment = anchor, fontStyle = fs, normal = { textColor = color }, wordWrap = false, clipping = TextClipping.Overflow };
 
@@ -673,8 +683,8 @@ public partial class BigTwoGame : MonoBehaviour
     void OnGUI()
     {
         if (font == null) return;
-        float sc = Screen.height / 1000f;
-        GUI.matrix = Matrix4x4.Scale(new Vector3(sc, sc, 1));
+        float sc = UiScale;
+        GUI.matrix = Matrix4x4.TRS(new Vector3(0, (Screen.height - 1000 * sc) / 2, 0), Quaternion.identity, new Vector3(sc, sc, 1));
         float W = VW;
 
         if (phase == Phase.Menu) { DrawMenu(W); DrawToast(W); return; }
@@ -781,7 +791,7 @@ public partial class BigTwoGame : MonoBehaviour
         float x0 = W / 2 - (cw + step * (n - 1)) / 2;
         var rects = new Rect[n];
         for (int i = 0; i < n; i++)
-            rects[i] = new Rect(x0 + i * step, 1000 - ch - 24 - (selected.Contains(hand[i].id) ? 40 : 0), cw, ch);
+            rects[i] = new Rect(x0 + i * step, 1000 + ExtraBottom - ch - 24 - (selected.Contains(hand[i].id) ? 40 : 0), cw, ch);
 
         // 겹친 카드는 위에 그려진(오른쪽) 카드가 눌린다
         var e = Event.current;
@@ -861,7 +871,7 @@ public partial class BigTwoGame : MonoBehaviour
         if (Btn(new Rect(cx + 150, 730, 250, 90), inviteCode != "" ? $"{inviteCode} 참가" : "코드로 참가", true, inviteCode != ""))
             JoinRoom(inviteCode);
         if (inviteCode != "") GUI.Label(new Rect(0, 690, W, 34), $"초대받은 방: {inviteCode}", Style(24, new Color(1f, 0.6f, 0.4f)));
-        GUI.Label(new Rect(0, 860, W, 80), "9장씩 시작 · 패스하면 더미에서 1장 먹기 · 가장 먼저 다 내면 1등\n나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(22, new Color(0.5f, 0.48f, 0.45f)));
+        GUI.Label(new Rect(0, 860, W, 80), "9장씩 시작 · 패스하면 더미에서 1장 먹기 · ♠2가 조커보다 높은 최강 카드\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
     }
 
     void DrawEnd(float W)
