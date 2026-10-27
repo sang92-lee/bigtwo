@@ -66,7 +66,7 @@ public partial class BigTwoGame : MonoBehaviour
     Material blackMat;
     Texture2D cardTex, backTex, panelTex, selTex, whiteTex;
     AudioSource sfx, tickSrc;
-    AudioClip snapClip, passClip, turnClip, tickClip;
+    AudioClip snapClip, passClip, turnClip, tickClip, shineClip;
 
     // ---------- 장면 ----------
 
@@ -346,6 +346,13 @@ public partial class BigTwoGame : MonoBehaviour
             float attack = Mathf.Clamp01(t / 0.003f); // 시작을 살짝 부드럽게 (톡 튀는 소리 방지)
             return attack * (Mathf.Sin(t * 2 * Mathf.PI * 170f) * Mathf.Exp(-t * 50f) * 0.35f + lp * Mathf.Exp(-t * 80f) * 0.25f);
         });
+        // 조커 먹을 때: 위로 올라가는 반짝 화음
+        shineClip = Synth(1.2f, (t, i) =>
+        {
+            float v = 0; float[] f = { 523f, 659f, 784f, 1047f, 1319f };
+            for (int k = 0; k < f.Length; k++) { float st = k * 0.08f; if (t > st) v += Mathf.Sin((t - st) * 2 * Mathf.PI * f[k]) * Mathf.Exp(-(t - st) * 3.5f); }
+            return v * 0.09f * Mathf.Clamp01(t / 0.005f);
+        });
         tickClip = Synth(0.05f, (t, i) => Mathf.Sin(t * 2 * Mathf.PI * 900f) * Mathf.Exp(-t * 90f) * 0.25f);
         passClip = Synth(0.2f, (t, i) => // 손가락으로 테이블 두 번 톡톡
             (Mathf.Sin(t * 2 * Mathf.PI * 95f) * Mathf.Exp(-t * 60f) + (t > 0.11f ? Mathf.Sin((t - 0.11f) * 2 * Mathf.PI * 95f) * Mathf.Exp(-(t - 0.11f) * 60f) : 0)) * 0.35f);
@@ -539,8 +546,19 @@ public partial class BigTwoGame : MonoBehaviour
 
     void ShowDraw(int who, Card mine)
     {
-        if (who == 0 && mine != null) { drawnId = mine.id; drawnAt = Time.time; return; }
+        if (who == 0 && mine != null)
+        {
+            drawnId = mine.id; drawnAt = Time.time;
+            if (mine.Joker) StartCoroutine(PlayLater(shineClip, DrawAnim * 0.4f, 0.8f)); // 조커 먹으면 반짝
+            return;
+        }
         if (who > 0 && who < players.Count) StartCoroutine(DrawFx3D(who));
+    }
+
+    System.Collections.IEnumerator PlayLater(AudioClip c, float wait, float vol)
+    {
+        yield return new WaitForSeconds(wait);
+        sfx.PlayOneShot(c, vol);
     }
 
     System.Collections.IEnumerator DrawFx3D(int who)
@@ -862,13 +880,14 @@ public partial class BigTwoGame : MonoBehaviour
 
         float since = Time.time - drawnAt;
         int animIdx = -1;
+        float animLen = hand.Any(c => c.id == drawnId && c.Joker) ? DrawAnim * 1.8f : DrawAnim; // 조커는 더 오래 보여줌
         for (int i = 0; i < n; i++)
         {
-            if (hand[i].id == drawnId && since < DrawAnim) { animIdx = i; continue; } // 날아오는 중
-            if (hand[i].id == drawnId && since < DrawAnim + 2.5f)
+            if (hand[i].id == drawnId && since < animLen) { animIdx = i; continue; } // 날아오는 중
+            if (hand[i].id == drawnId && since < animLen + 2.5f)
             {
                 var old0 = GUI.color; // 방금 먹은 카드: 테두리 빛
-                GUI.color = new Color(1f, 0.75f, 0.35f, 0.9f * (1 - (since - DrawAnim) / 2.5f));
+                GUI.color = new Color(1f, 0.75f, 0.35f, 0.9f * (1 - (since - animLen) / 2.5f));
                 GUI.DrawTexture(new Rect(rects[i].x - 5, rects[i].y - 5, rects[i].width + 10, rects[i].height + 10), selTex);
                 GUI.color = old0;
             }
@@ -888,10 +907,25 @@ public partial class BigTwoGame : MonoBehaviour
             var pile = PileOnScreen();
             var start = new Rect(pile.x - 30, pile.y - 43, 60, 86);
             var show = new Rect(W / 2 - cw * 0.65f, 470 - ch * 0.65f, cw * 1.3f, ch * 1.3f);
-            float t = since / DrawAnim;
+            float t = since / animLen;
             Rect r = t < 0.45f ? Lerp(start, show, Ease(t / 0.45f)) : t < 0.7f ? show : Lerp(show, rects[animIdx], Ease((t - 0.7f) / 0.3f));
+            bool joker = hand[animIdx].Joker;
+            if (joker && t > 0.3f)
+            {
+                // 조커: 금빛 후광이 퍼져 나감
+                var old = GUI.color;
+                for (int k = 0; k < 4; k++)
+                {
+                    float p = Mathf.Repeat(Time.time * 1.6f + k * 0.25f, 1f), grow = 20 + p * 90;
+                    GUI.color = new Color(1f, 0.82f, 0.3f, (1 - p) * 0.55f);
+                    GUI.DrawTexture(new Rect(r.x - grow / 2, r.y - grow / 2, r.width + grow, r.height + grow), selTex);
+                }
+                GUI.color = old;
+            }
             DrawCard(r, hand[animIdx]);
-            if (t < 0.7f) GUI.Label(new Rect(0, show.y - 40, W, 34), "1장 먹음", Style(24, new Color(1f, 0.75f, 0.45f), TextAnchor.MiddleCenter, FontStyle.Bold));
+            if (t < 0.7f)
+                GUI.Label(new Rect(0, show.y - (joker ? 64 : 40), W, joker ? 60 : 34), joker ? "★ 조커! ★" : "1장 먹음",
+                    Style(joker ? 46 : 24, joker ? new Color(1f, 0.85f, 0.35f) : new Color(1f, 0.75f, 0.45f), TextAnchor.MiddleCenter, FontStyle.Bold));
         }
     }
 

@@ -64,7 +64,8 @@ public static class Rules
         var ranks = nj <= 2 ? Enumerable.Range(0, 13) : rest.Select(x => x.r).Distinct().Append(12);
         foreach (var r in ranks)
             for (int s = 0; s < 4; s++)
-                if (r < 12 || s == 0) opts.Add(new Card { id = -2, r = r, s = s });
+                // 같은 숫자와 묶이면 클로버로만, ♣2 위로는 못 감
+                if ((r < 12 || s == 0) && (s == 0 || !rest.Any(x => x.r == r))) opts.Add(new Card { id = -2, r = r, s = s });
         Combo best = null;
         void Try(List<Card> cur, int left)
         {
