@@ -19,9 +19,24 @@ sed -i '' -e 's|<title>.*</title>|<title>빅 투</title>|' \
 STAMP=$(date +%s)
 sed -i '' -E "s#(\.unityweb|\.loader\.js)\"#\1?v=$STAMP\"#g" $REPO/public/index.html
 
+# 홈 화면에 추가(앱처럼 설치): 아이콘·manifest·서비스 워커
+cp web/* $REPO/public/
+python3 - $REPO/public/index.html <<'P'
+import sys
+f=sys.argv[1]; s=open(f).read()
+head = ('<link rel="manifest" href="manifest.webmanifest">'
+        '<meta name="theme-color" content="#090809">'
+        '<link rel="apple-touch-icon" href="icon-192.png">'
+        '<meta name="apple-mobile-web-app-capable" content="yes">'
+        '<meta name="apple-mobile-web-app-title" content="빅 투">')
+s = s.replace('<link rel="shortcut icon" href="TemplateData/favicon.ico">', '<link rel="icon" href="icon-192.png">' + head)
+s = s.replace('</body>', "<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script></body>")
+open(f,'w').write(s)
+P
+
 # 소스
 mkdir -p $REPO/unity
-rsync -a --delete --exclude '*.meta' --exclude 'Screenshots' Assets/Scripts Assets/Editor $REPO/unity/
+rsync -a --delete --exclude '*.meta' --exclude 'Screenshots' Assets/Scripts Assets/Editor Assets/Plugins web $REPO/unity/
 cp Packages/manifest.json $REPO/unity/manifest.json
 cp README.md $REPO/README.md
 cp deploy.sh $REPO/unity/deploy.sh

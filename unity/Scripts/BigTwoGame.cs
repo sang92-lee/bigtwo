@@ -42,8 +42,8 @@ public partial class BigTwoGame : MonoBehaviour
     int turn, lastBy = -1, passes, round;
     Combo lastCombo;
     List<Card> lastCards = new List<Card>();
-    List<Card> drawPile = new List<Card>(); // 처음 9장씩 나누고 남은 카드. 패스하면 1장 먹기
-    const int DealCount = 9;
+    List<Card> drawPile = new List<Card>(); // 처음 13장씩 나누고 남은 카드. 패스하면 1장 먹기
+    const int DealCount = 13;
     Transform pileStack;
     string lastText = "", toast = "";
     float toastUntil, botTimer;
@@ -885,8 +885,9 @@ public partial class BigTwoGame : MonoBehaviour
         if (Btn(new Rect(cx - 125, 730, 250, 90), "방 만들기", true, inviteCode == "")) CreateRoom();
         if (Btn(new Rect(cx + 150, 730, 250, 90), inviteCode != "" ? $"{inviteCode} 참가" : "코드로 참가", true, inviteCode != ""))
             JoinRoom(inviteCode);
+        if (Online && Btn(new Rect(20, 18, 150, 50), "새로고침")) NetReload(); // 폰에서 당겨서 새로고침이 안 돼서
         if (inviteCode != "") GUI.Label(new Rect(0, 690, W, 34), $"초대받은 방: {inviteCode}", Style(24, new Color(1f, 0.6f, 0.4f)));
-        GUI.Label(new Rect(0, 860, W, 80), "9장씩 시작 · 패스하면 더미에서 1장 먹기 · ♠2가 조커보다 높은 최강 카드\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
+        GUI.Label(new Rect(0, 860, W, 80), "13장씩 시작 · 패스하면 더미에서 1장 먹기 · ♠2가 조커보다 높은 최강 카드\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
     }
 
     void DrawEnd(float W)

@@ -27,6 +27,7 @@ public partial class BigTwoGame
     [DllImport("__Internal")] static extern string NetLink(string code);
     [DllImport("__Internal")] static extern void NetCopy(string text);
     [DllImport("__Internal")] static extern void NetAsk(string key, string title, string def);
+    [DllImport("__Internal")] static extern void NetReload();
     static bool Online => true;
 #else
     static void NetInit() { }
@@ -40,6 +41,7 @@ public partial class BigTwoGame
     static string NetLink(string code) => "?room=" + code;
     static void NetCopy(string text) { GUIUtility.systemCopyBuffer = text; }
     static void NetAsk(string key, string title, string def) { }
+    static void NetReload() { }
     static bool Online => false;
 #endif
 

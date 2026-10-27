@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>빅 투</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="icon" href="icon-192.png"><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#090809"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="빅 투">
     <link rel="stylesheet" href="TemplateData/style.css">
   </head>
   <body>
@@ -57,12 +57,12 @@
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/WebGL.loader.js?v=1793061909";
+      var loaderUrl = buildUrl + "/WebGL.loader.js?v=1793065117";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/WebGL.data.unityweb?v=1793061909",
-        frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb?v=1793061909",
-        codeUrl: buildUrl + "/WebGL.wasm.unityweb?v=1793061909",
+        dataUrl: buildUrl + "/WebGL.data.unityweb?v=1793065117",
+        frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb?v=1793065117",
+        codeUrl: buildUrl + "/WebGL.wasm.unityweb?v=1793065117",
         streamingAssetsUrl: "StreamingAssets",
 
         // If you have a custom web site structure, or want to place multiple Unity build instances on the same page,
@@ -146,5 +146,5 @@
       document.body.appendChild(script);
 
     </script>
-  </body>
+  <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script></body>
 </html>
