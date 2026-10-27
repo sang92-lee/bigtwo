@@ -629,13 +629,28 @@ public partial class BigTwoGame : MonoBehaviour
         float aspect = Mathf.Max(0.3f, cam.aspect);
         bool p = aspect < 0.95f;
         if (p != portrait) { portrait = p; if (players.Count > 1 && phase != Phase.Menu) PlaceSeats(); }
-        float back = aspect < 1.2f ? (1.2f - aspect) * 2.2f : 0;
-        var pos = new Vector3(0, 1.85f + back * 0.45f, -2.25f - back);
+        // 카메라는 원래 자리 근처에 두고(세로 화면만 살짝 뒤로), 앉은 사람 어깨가 딱 들어오는 만큼만 시야를 넓힌다
+        float back = aspect < 1f ? (1f - aspect) * 0.5f : 0;
+        var pos = new Vector3(0, 1.85f + back * 0.4f, -2.25f - back);
         cam.transform.position = pos;
         cam.transform.LookAt(new Vector3(0, 0.82f, 0.25f));
-        float halfH = Mathf.Atan(2.2f / (-pos.z)) ; // 필요한 가로 반각
-        float v = 2f * Mathf.Atan(Mathf.Tan(halfH) / aspect) * Mathf.Rad2Deg;
-        cam.fieldOfView = Mathf.Clamp(v, 55f, 100f);
+        float fov = 52f;
+        for (; fov < 100f; fov += 2f)
+        {
+            cam.fieldOfView = fov;
+            bool fits = true;
+            foreach (var st in seats)
+            {
+                if (!st.root.activeSelf) continue;
+                var tr = st.root.transform;
+                foreach (var side in new[] { -0.38f, 0.38f })
+                {
+                    float x = cam.WorldToViewportPoint(tr.position + Vector3.up * 1.3f + tr.right * side).x;
+                    if (x < 0.02f || x > 0.98f) fits = false;
+                }
+            }
+            if (fits) break;
+        }
     }
 
     void Toast(string msg) { toast = msg; toastUntil = Time.time + 2f; }
