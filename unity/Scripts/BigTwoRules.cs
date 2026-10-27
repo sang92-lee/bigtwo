@@ -53,7 +53,35 @@ public static class Rules
         }
     }
 
+    // 조커는 혼자면 그냥 조커(A < 조커 < 2), 다른 카드와 같이 내면 ♣2까지 아무 카드로 변신 (가장 센 쪽으로)
     public static Combo Eval(IList<Card> cs)
+    {
+        int nj = cs.Count(x => x.Joker);
+        if (cs.Count <= 1 || nj == 0) return EvalPlain(cs);
+        var rest = cs.Where(x => !x.Joker).ToList();
+        // 변신 후보: 조커가 2장 이하면 3~♣2 전부, 더 많으면 손에 있는 숫자들만 (계산 줄이기)
+        var opts = new List<Card>();
+        var ranks = nj <= 2 ? Enumerable.Range(0, 13) : rest.Select(x => x.r).Distinct().Append(12);
+        foreach (var r in ranks)
+            for (int s = 0; s < 4; s++)
+                if (r < 12 || s == 0) opts.Add(new Card { id = -2, r = r, s = s });
+        Combo best = null;
+        void Try(List<Card> cur, int left)
+        {
+            if (left == 0)
+            {
+                var cb = EvalPlain(cur);
+                if (cb != null && (best == null || cb.Beats(best))) best = cb;
+                return;
+            }
+            foreach (var o in opts) { cur.Add(o); Try(cur, left - 1); cur.RemoveAt(cur.Count - 1); }
+        }
+        Try(new List<Card>(rest), nj);
+        if (best != null) best.name += "(조커)";
+        return best;
+    }
+
+    static Combo EvalPlain(IList<Card> cs)
     {
         int n = cs.Count;
         if (n == 0) return null;
@@ -109,11 +137,13 @@ public static class Rules
 
         if (last.type <= 3)
         {
+            var jks = hand.Where(x => x.Joker).ToList();
             foreach (var g in byRank.Values)
-                foreach (var pick in Subsets(g, last.type)) Mark(pick);
+                foreach (var pick in Subsets(g[0].Joker ? g : g.Concat(jks.Take(2)).ToList(), last.type)) Mark(pick);
             return ok;
         }
-        if (last.type == 4) { foreach (var m in Moves(hand, last)) foreach (var c in m) ok.Add(c.id); return ok; }
+        foreach (var m in Moves(hand, last)) foreach (var c in m) ok.Add(c.id); // 조커 섞인 조합
+        if (last.type == 4) return ok;
 
         // 5장: 각 카드마다 "이 카드 + 나머지는 가장 센 카드"로 이길 수 있는지 본다
         Card Top(int r, Card not = null) => byRank[r].Where(x => x != not).LastOrDefault();
@@ -185,10 +215,35 @@ public static class Rules
         var byRank = sorted.GroupBy(x => x.r).ToDictionary(g => g.Key, g => g.ToList());
         bool want(int n) => last == null || last.type == n;
         if (want(1)) all.AddRange(sorted.Select(c => new List<Card> { c }));
+        var jk = sorted.Where(x => x.Joker).ToList();
         foreach (var g in byRank.Values)
         {
-            if (want(2)) all.AddRange(Subsets(g, 2).Take(12));
-            if (want(3)) all.AddRange(Subsets(g, 3).Take(12));
+            var pool = g[0].Joker ? g : g.Concat(jk.Take(2)).ToList(); // 숫자 + 조커
+            if (want(2)) all.AddRange(Subsets(pool, 2).Take(16));
+            if (want(3)) all.AddRange(Subsets(pool, 3).Take(16));
+        }
+        if (jk.Count > 0 && (want(4) || want(5)))
+        {
+            // 조커 1장으로 빈칸 메우기: 다른 카드 4장 + 조커
+            var plain = sorted.Where(x => !x.Joker).ToList();
+            if (want(4))
+                foreach (var p in byRank.Where(kv => kv.Key < 13 && kv.Value.Count >= 2))
+                    foreach (var c in plain.Where(x => x.r != p.Key).GroupBy(x => x.r).Select(g => g.First()))
+                        all.Add(p.Value.Take(2).Append(c).Append(jk[0]).ToList());
+            if (want(5))
+            {
+                for (int st = 0; st + 4 < 13; st++)
+                {
+                    var win = Enumerable.Range(st, 5).ToList();
+                    var have = win.Where(byRank.ContainsKey).ToList();
+                    if (have.Count == 4) all.Add(have.Select(r => byRank[r].First()).Append(jk[0]).ToList());
+                }
+                foreach (var f in plain.GroupBy(x => x.s).Select(g => g.ToList()).Where(l => l.Count >= 4))
+                    all.Add(f.Take(4).Append(jk[0]).ToList());
+                foreach (var t in byRank.Where(kv => kv.Key < 13 && kv.Value.Count >= 2))
+                    foreach (var p in byRank.Where(kv => kv.Key < 13 && kv.Key != t.Key && kv.Value.Count >= 2))
+                        all.Add(t.Value.Take(2).Concat(p.Value.Take(2)).Append(jk[0]).ToList()); // 투페어 + 조커 = 풀하우스
+            }
         }
         if (want(4))
         {
