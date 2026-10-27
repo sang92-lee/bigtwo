@@ -59,7 +59,7 @@ public partial class BigTwoGame : MonoBehaviour
     Camera cam;
     Material blackMat;
     Texture2D cardTex, backTex, panelTex, selTex, whiteTex;
-    AudioSource sfx;
+    AudioSource sfx, tickSrc;
     AudioClip snapClip, passClip, turnClip, tickClip;
 
     // ---------- 장면 ----------
@@ -236,8 +236,6 @@ public partial class BigTwoGame : MonoBehaviour
             s.root.SetActive(true);
             players[k].seat = s;
         }
-        // 세로 화면(폰)에서는 양옆 사람이 보이게 시야를 넓힌다
-        cam.fieldOfView = cam.aspect < 1f ? 92f : 60f;
     }
 
     void RefreshSeats()
@@ -323,40 +321,27 @@ public partial class BigTwoGame : MonoBehaviour
     void BuildSounds()
     {
         sfx = gameObject.AddComponent<AudioSource>();
+        tickSrc = gameObject.AddComponent<AudioSource>();
         // 카드가 펠트에 "탁" 내려앉는 소리: 낮은 쿵 + 부드럽게 깎은 종이 소리
         float lp = 0;
         snapClip = Synth(0.12f, (t, i) =>
         {
-            lp += ((float)(rng.NextDouble() * 2 - 1) - lp) * 0.35f;
-            return (Mathf.Sin(t * 2 * Mathf.PI * 120f) * Mathf.Exp(-t * 45f) * 0.55f + lp * Mathf.Exp(-t * 70f) * 0.5f);
+            lp += ((float)(rng.NextDouble() * 2 - 1) - lp) * 0.15f;
+            float attack = Mathf.Clamp01(t / 0.003f); // 시작을 살짝 부드럽게 (톡 튀는 소리 방지)
+            return attack * (Mathf.Sin(t * 2 * Mathf.PI * 170f) * Mathf.Exp(-t * 50f) * 0.35f + lp * Mathf.Exp(-t * 80f) * 0.25f);
         });
         tickClip = Synth(0.05f, (t, i) => Mathf.Sin(t * 2 * Mathf.PI * 900f) * Mathf.Exp(-t * 90f) * 0.25f);
         passClip = Synth(0.2f, (t, i) => // 손가락으로 테이블 두 번 톡톡
             (Mathf.Sin(t * 2 * Mathf.PI * 95f) * Mathf.Exp(-t * 60f) + (t > 0.11f ? Mathf.Sin((t - 0.11f) * 2 * Mathf.PI * 95f) * Mathf.Exp(-(t - 0.11f) * 60f) : 0)) * 0.35f);
         turnClip = Synth(0.5f, (t, i) =>
         {
-            float b1 = Mathf.Exp(-t * 25f), b2 = t > 0.22f ? Mathf.Exp(-(t - 0.22f) * 25f) : 0;
-            return Mathf.Sin(t * 2 * Mathf.PI * 55f) * (b1 + b2 * 0.8f) * 0.7f;
+            // 심장 소리: 폰 스피커가 찢어지지 않게 너무 낮은 음·큰 소리는 피함
+            float a1 = Mathf.Clamp01(t / 0.01f), b1 = Mathf.Exp(-t * 22f);
+            float t2 = t - 0.22f, b2 = t2 > 0 ? Mathf.Clamp01(t2 / 0.01f) * Mathf.Exp(-t2 * 22f) : 0;
+            return Mathf.Sin(t * 2 * Mathf.PI * 85f) * (a1 * b1 + b2 * 0.8f) * 0.32f;
         });
 
-        // 배경: 아주 작게 깔리는 방 공기 소리 (깎은 갈색 잡음). 끝과 처음이 이어지게 기울기를 뺀다
-        int rate = 22050, n = rate * 8;
-        var room = new float[n];
-        float w = 0, w2 = 0;
-        for (int i = 0; i < n; i++)
-        {
-            w = Mathf.Clamp(w + (float)(rng.NextDouble() * 2 - 1) * 0.02f, -1, 1);
-            w2 += (w - w2) * 0.05f;
-            room[i] = w2;
-        }
-        float drift = room[n - 1] - room[0];
-        for (int i = 0; i < n; i++) room[i] = (room[i] - drift * i / n) * 0.5f;
-        var amb = gameObject.AddComponent<AudioSource>();
-        amb.clip = AudioClip.Create("room", n, 1, rate, false);
-        amb.clip.SetData(room, 0);
-        amb.loop = true;
-        amb.volume = 0.35f;
-        amb.Play();
+        // 배경 소리는 없음 (잡음이 스피커에서 지직거려서 뺌). 조용함이 긴장감
     }
 
     static AudioClip Synth(float len, System.Func<float, int, float> f)
@@ -455,11 +440,12 @@ public partial class BigTwoGame : MonoBehaviour
         if (drawPile.Count > 0)
         {
             var p = players[i];
+            lastDrawnId = drawPile[0].id;
             p.hand.Add(drawPile[0]);
             drawPile.RemoveAt(0);
             p.hand = p.hand.OrderBy(c => c.Val).ToList();
             drew = " · 1장 먹음";
-            if (i == 0) Toast("패스 · 카드 1장 먹음");
+            ShowDraw(i, i == 0 ? p.hand.First(c => c.id == lastDrawnId) : null);
         }
         if (passes >= numPlayers - 1)
         {
@@ -494,7 +480,8 @@ public partial class BigTwoGame : MonoBehaviour
 
     void Update()
     {
-        if (mode == NetMode.Client || phase != Phase.Play) return;
+        if (phase != Phase.Play) return;
+        if (mode == NetMode.Client) { if (turn == 0) Tick(); return; } // 판정은 방장이, 시계 소리만 여기서
         if (!players[turn].bot) { HumanClock(); return; }
         botTimer -= Time.deltaTime;
         if (botTimer > 0) return;
@@ -505,13 +492,61 @@ public partial class BigTwoGame : MonoBehaviour
     // 내 턴 시간: 마지막 5초는 똑딱, 다 되면 자동 패스 (판을 여는 차례면 가장 약한 패를 냄)
     void HumanClock()
     {
-        float left = turnEnd - Time.time;
-        int sec = Mathf.CeilToInt(left);
-        if (turn == 0 && sec <= 5 && sec < lastTick && sec > 0) { lastTick = sec; sfx.PlayOneShot(tickClip, 0.6f); }
-        if (left > 0) return;
+        Tick();
+        if (turnEnd - Time.time > 0) return;
         if (turn == 0) { selected.Clear(); Toast("시간 초과"); }
         if (lastCombo == null) Play(turn, Rules.BotMove(players[turn].hand, null));
         else Pass(turn);
+    }
+
+    void Tick()
+    {
+        int sec = Mathf.CeilToInt(turnEnd - Time.time);
+        // 내 차례 시계 소리: 매초 작게 똑딱, 마지막 5초는 크고 높게
+        if (turn == 0 && sec < lastTick && sec > 0)
+        {
+            lastTick = sec;
+            if (sec <= 5) tickSrc.pitch = 1.35f; else tickSrc.pitch = sec % 2 == 0 ? 1f : 0.85f;
+            tickSrc.PlayOneShot(tickClip, sec <= 5 ? 0.75f : 0.3f);
+        }
+    }
+
+    // ---------- 카드 먹는 연출: 더미에서 천천히 ----------
+    int drawnId = -1, lastDrawnId = -1;
+    float drawnAt = -10;
+    const float DrawAnim = 1.1f;
+
+    void ShowDraw(int who, Card mine)
+    {
+        if (who == 0 && mine != null) { drawnId = mine.id; drawnAt = Time.time; return; }
+        if (who > 0 && who < players.Count) StartCoroutine(DrawFx3D(who));
+    }
+
+    System.Collections.IEnumerator DrawFx3D(int who)
+    {
+        var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Destroy(q.GetComponent<Collider>());
+        q.GetComponent<Renderer>().sharedMaterial = backMat;
+        q.transform.localScale = new Vector3(0.13f, 0.19f, 1);
+        var from = new Vector3(0.72f, 0.82f, -0.15f);
+        var to = players[who].seat.pile.position + Vector3.up * 0.02f;
+        for (float t = 0; t < 1; t += Time.deltaTime / 0.8f)
+        {
+            float e = t * t * (3 - 2 * t);
+            q.transform.position = Vector3.Lerp(from, to, e) + Vector3.up * Mathf.Sin(t * Mathf.PI) * 0.1f;
+            q.transform.rotation = Quaternion.Euler(90, Mathf.Lerp(18, players[who].seat.root.transform.eulerAngles.y, e), 0);
+            yield return null;
+        }
+        sfx.PlayOneShot(snapClip, 0.3f);
+        Destroy(q);
+    }
+
+    // 더미 위치를 화면(가상 1000 높이) 좌표로
+    Vector2 PileOnScreen()
+    {
+        var p = cam.WorldToScreenPoint(new Vector3(0.72f, 0.8f, -0.15f));
+        float sc = Screen.height / 1000f;
+        return new Vector2(p.x / sc, (Screen.height - p.y) / sc);
     }
 
     // ---------- 카드 내는 연출 ----------
@@ -567,6 +602,7 @@ public partial class BigTwoGame : MonoBehaviour
 
     void LateUpdate()
     {
+        FitCamera();
         // 말하는 사람 머리 위 조명 (온라인 마이크)
         for (int k = 1; k < players.Count; k++)
         {
@@ -579,6 +615,20 @@ public partial class BigTwoGame : MonoBehaviour
         // 이름표는 항상 카메라를 향하게
         foreach (var s in seats)
             if (s.root.activeSelf) s.label.transform.rotation = Quaternion.LookRotation(s.label.transform.position - cam.transform.position);
+    }
+
+    // 화면 비율이 어떻든 양옆 자리까지 들어오게: 가로로 ±2.2m가 보이도록 시야를 맞추고,
+    // 세로로 긴 폰에서는 카메라를 뒤·위로 뺀다
+    void FitCamera()
+    {
+        float aspect = Mathf.Max(0.3f, cam.aspect);
+        float back = aspect < 1.2f ? (1.2f - aspect) * 2.2f : 0;
+        var pos = new Vector3(0, 1.85f + back * 0.45f, -2.25f - back);
+        cam.transform.position = pos;
+        cam.transform.LookAt(new Vector3(0, 0.82f, 0.25f));
+        float halfH = Mathf.Atan(2.2f / (-pos.z)) ; // 필요한 가로 반각
+        float v = 2f * Mathf.Atan(Mathf.Tan(halfH) / aspect) * Mathf.Rad2Deg;
+        cam.fieldOfView = Mathf.Clamp(v, 55f, 100f);
     }
 
     void Toast(string msg) { toast = msg; toastUntil = Time.time + 2f; }
@@ -747,8 +797,18 @@ public partial class BigTwoGame : MonoBehaviour
                 break;
             }
 
-                for (int i = 0; i < n; i++)
+        float since = Time.time - drawnAt;
+        int animIdx = -1;
+        for (int i = 0; i < n; i++)
         {
+            if (hand[i].id == drawnId && since < DrawAnim) { animIdx = i; continue; } // 날아오는 중
+            if (hand[i].id == drawnId && since < DrawAnim + 2.5f)
+            {
+                var old0 = GUI.color; // 방금 먹은 카드: 테두리 빛
+                GUI.color = new Color(1f, 0.75f, 0.35f, 0.9f * (1 - (since - DrawAnim) / 2.5f));
+                GUI.DrawTexture(new Rect(rects[i].x - 5, rects[i].y - 5, rects[i].width + 10, rects[i].height + 10), selTex);
+                GUI.color = old0;
+            }
             float dim = phase != Phase.Play ? 1f : turn != 0 ? 0.78f : playable.Contains(hand[i].id) ? 1f : 0.42f;
             DrawCard(rects[i], hand[i], dim);
             if (phase == Phase.Play && turn == 0 && lastCombo != null && playable.Contains(hand[i].id))
@@ -759,7 +819,21 @@ public partial class BigTwoGame : MonoBehaviour
                 GUI.color = old;
             }
         }
+        if (animIdx >= 0)
+        {
+            // 더미 → 가운데에서 잠깐 앞면 보여주기 → 손패 자리로
+            var pile = PileOnScreen();
+            var start = new Rect(pile.x - 30, pile.y - 43, 60, 86);
+            var show = new Rect(W / 2 - cw * 0.65f, 470 - ch * 0.65f, cw * 1.3f, ch * 1.3f);
+            float t = since / DrawAnim;
+            Rect r = t < 0.45f ? Lerp(start, show, Ease(t / 0.45f)) : t < 0.7f ? show : Lerp(show, rects[animIdx], Ease((t - 0.7f) / 0.3f));
+            DrawCard(r, hand[animIdx]);
+            if (t < 0.7f) GUI.Label(new Rect(0, show.y - 40, W, 34), "1장 먹음", Style(24, new Color(1f, 0.75f, 0.45f), TextAnchor.MiddleCenter, FontStyle.Bold));
+        }
     }
+
+    static float Ease(float x) { x = Mathf.Clamp01(x); return x * x * (3 - 2 * x); }
+    static Rect Lerp(Rect a, Rect b, float t) => new Rect(Mathf.Lerp(a.x, b.x, t), Mathf.Lerp(a.y, b.y, t), Mathf.Lerp(a.width, b.width, t), Mathf.Lerp(a.height, b.height, t));
 
     void DrawMenu(float W)
     {

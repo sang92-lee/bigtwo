@@ -270,6 +270,8 @@ public partial class BigTwoGame
         var prevPhase = phase;
         int R(int g) => g < 0 ? -1 : ((g - v.you) % n + n) % n;
 
+        var prevMine = players.Count > 0 ? new HashSet<int>(players[0].hand.Select(c => c.id)) : null;
+        var prevCounts = players.GroupBy(p => p.name).ToDictionary(g => g.Key, g => g.First().hand.Count);
         players.Clear();
         for (int l = 0; l < n; l++)
         {
@@ -301,8 +303,17 @@ public partial class BigTwoGame
             {
                 sfx.PlayOneShot(turnClip, 0.9f);
                 selected.Clear();
+                lastTick = 99;
             }
             playable = Rules.Playable(players[0].hand, lastCombo);
+        }
+        if (phase == Phase.Play && prevPhase == Phase.Play)
+        {
+            // 패스해서 먹은 카드: 나는 날아오는 앞면, 남은 뒷면이 그 자리로
+            var got = prevMine == null ? null : players[0].hand.FirstOrDefault(c => !prevMine.Contains(c.id));
+            if (got != null) ShowDraw(0, got);
+            for (int k = 1; k < players.Count; k++)
+                if (prevCounts.TryGetValue(players[k].name, out var pc) && players[k].hand.Count == pc + 1) ShowDraw(k, null);
         }
         for (int k = 1; k < players.Count; k++) players[k].seat.halo.intensity = phase == Phase.Play && turn == k ? 2.2f : 0;
         RefreshSeats();
