@@ -58,7 +58,7 @@ public partial class BigTwoGame : MonoBehaviour
     Font font;
     Camera cam;
     Material blackMat;
-    Texture2D cardTex, backTex, panelTex, whiteTex;
+    Texture2D cardTex, backTex, panelTex, selTex, whiteTex;
     AudioSource sfx;
     AudioClip snapClip, passClip, turnClip, tickClip;
 
@@ -286,6 +286,7 @@ public partial class BigTwoGame : MonoBehaviour
         whiteTex = Texture2D.whiteTexture;
         cardTex = Rounded(96, 136, 10, new Color(0.96f, 0.94f, 0.88f), new Color(0.55f, 0.5f, 0.45f));
         backTex = Rounded(96, 136, 10, new Color(0.38f, 0.05f, 0.06f), new Color(0.85f, 0.7f, 0.45f), true);
+        selTex = Rounded(64, 64, 14, new Color(0.78f, 0.36f, 0.22f, 0.95f), new Color(1f, 0.72f, 0.5f));
         panelTex = Rounded(64, 64, 14, new Color(0, 0, 0, 0.78f), new Color(0.6f, 0.25f, 0.15f, 0.8f));
         backMat = Mat(Color.white, 0.3f);
         backMat.mainTexture = Rounded(96, 136, 0, new Color(0.38f, 0.05f, 0.06f), new Color(0.85f, 0.7f, 0.45f), true);
@@ -591,10 +592,11 @@ public partial class BigTwoGame : MonoBehaviour
     bool Btn(Rect r, string text, bool on = true, bool accent = false)
     {
         var old = GUI.color;
-        GUI.color = !on ? new Color(1, 1, 1, 0.35f) : accent ? new Color(1f, 0.6f, 0.45f) : Color.white;
-        GUI.DrawTexture(r, panelTex, ScaleMode.StretchToFill);
+        // 선택된(강조) 버튼은 주황으로 꽉 채워서 확실히 보이게
+        GUI.color = !on ? new Color(1, 1, 1, 0.35f) : Color.white;
+        GUI.DrawTexture(r, on && accent ? selTex : panelTex, ScaleMode.StretchToFill);
         GUI.color = old;
-        GUI.Label(r, text, Style(Mathf.RoundToInt(r.height * 0.42f), on ? new Color(0.95f, 0.9f, 0.82f) : new Color(0.6f, 0.6f, 0.6f)));
+        GUI.Label(r, text, Style(Mathf.RoundToInt(r.height * 0.42f), !on ? new Color(0.6f, 0.6f, 0.6f) : accent ? Color.white : new Color(0.95f, 0.9f, 0.82f), TextAnchor.MiddleCenter, accent ? FontStyle.Bold : FontStyle.Normal));
         return on && GUI.Button(r, GUIContent.none, GUIStyle.none);
     }
 
