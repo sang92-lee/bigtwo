@@ -29,8 +29,11 @@ head = ('<link rel="manifest" href="manifest.webmanifest">'
         '<link rel="apple-touch-icon" href="icon-192.png">'
         '<meta name="apple-mobile-web-app-capable" content="yes">'
         '<meta name="apple-mobile-web-app-title" content="빅 투">')
+# 카톡 안 브라우저면 바로 폰 기본 브라우저로 다시 연다 (설치·마이크가 거기서만 됨)
+head = ("<script>if(/KAKAOTALK/i.test(navigator.userAgent)){location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href);}</script>") + head
 s = s.replace('<link rel="shortcut icon" href="TemplateData/favicon.ico">', '<link rel="icon" href="icon-192.png">' + head)
-s = s.replace('</body>', "<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script></body>")
+s = s.replace('</body>', "<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');"
+              "addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.BTinstall=e;});</script></body>")
 open(f,'w').write(s)
 P
 

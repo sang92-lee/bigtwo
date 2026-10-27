@@ -122,6 +122,27 @@ mergeInto(LibraryManager.library, {
 
   NetReload: function () { location.reload(); },
 
+  // 홈 화면에 추가: 안드로이드는 설치 창을 바로, 아이폰은 방법 안내
+  NetInstallable: function () {
+    var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ||
+                     (window.matchMedia && matchMedia('(display-mode: fullscreen)').matches) || navigator.standalone;
+    return standalone ? 0 : 1;
+  },
+
+  NetInstall: function () {
+    var ev = window.BTinstall;
+    if (ev) { ev.prompt(); ev.userChoice.then(function () { window.BTinstall = null; }); return; }
+    var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    var msg = ios ? '아래(또는 위) 공유 버튼 <b>⬆︎</b> 을 누르고<br><b>홈 화면에 추가</b>를 고르세요'
+                  : '브라우저 메뉴 <b>⋮</b> 를 누르고<br><b>홈 화면에 추가</b> 또는 <b>앱 설치</b>를 고르세요';
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:sans-serif';
+    d.innerHTML = '<div style="background:#1a1412;border:1px solid #8a3a24;border-radius:12px;padding:22px;width:min(320px,86vw);color:#eee;text-align:center;font-size:17px;line-height:1.6">' +
+      msg + '<br><button style="margin-top:16px;padding:10px 28px;font-size:16px;border-radius:8px;border:0;background:#c8613f;color:#fff">알겠어요</button></div>';
+    d.onclick = function () { d.remove(); };
+    document.body.appendChild(d);
+  },
+
   NetRoomParam: function () {
     var s = new URLSearchParams(location.search).get('room') || '';
     var n = lengthBytesUTF8(s) + 1, b = _malloc(n); stringToUTF8(s, b, n); return b;

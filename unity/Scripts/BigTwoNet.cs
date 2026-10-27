@@ -28,6 +28,8 @@ public partial class BigTwoGame
     [DllImport("__Internal")] static extern void NetCopy(string text);
     [DllImport("__Internal")] static extern void NetAsk(string key, string title, string def);
     [DllImport("__Internal")] static extern void NetReload();
+    [DllImport("__Internal")] static extern int NetInstallable();
+    [DllImport("__Internal")] static extern void NetInstall();
     static bool Online => true;
 #else
     static void NetInit() { }
@@ -42,6 +44,8 @@ public partial class BigTwoGame
     static void NetCopy(string text) { GUIUtility.systemCopyBuffer = text; }
     static void NetAsk(string key, string title, string def) { }
     static void NetReload() { }
+    static int NetInstallable() => 0;
+    static void NetInstall() { }
     static bool Online => false;
 #endif
 
