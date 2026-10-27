@@ -19,6 +19,7 @@ public partial class BigTwoGame : MonoBehaviour
         public List<Card> hand = new List<Card>();
         public int total;
         public Seat seat;
+        public Rules.Persona persona;
         public string peer; // 온라인: 브라우저 연결 id (봇·혼자 모드는 null)
     }
 
@@ -51,7 +52,7 @@ public partial class BigTwoGame : MonoBehaviour
     float toastUntil, botTimer;
     readonly HashSet<int> selected = new HashSet<int>();
     HashSet<int> playable = new HashSet<int>();
-    const float TurnTime = 20f; // 내 턴 제한 시간
+    const float TurnTime = 60f; // 내 턴 제한 시간 (최대 1분)
     float turnEnd;
     int lastTick;
     List<Result> results;
@@ -391,6 +392,7 @@ public partial class BigTwoGame : MonoBehaviour
             int v = players[i].hand.Min(c => c.Val);
             if (v < best) { best = v; first = i; }
         }
+        foreach (var p in players) p.persona = Rules.Persona.Random(rng); // 판마다 봇 성격이 바뀜
         lastCombo = null; lastCards.Clear(); lastBy = -1; passes = 0;
         selected.Clear();
         results = null;
@@ -492,7 +494,11 @@ public partial class BigTwoGame : MonoBehaviour
         if (!players[turn].bot) { HumanClock(); return; }
         botTimer -= Time.deltaTime;
         if (botTimer > 0) return;
-        var move = Rules.BotMove(players[turn].hand, lastCombo);
+        int minOpp = players.Where((p, k) => k != turn).Min(p => p.hand.Count);
+        var bot = players[turn];
+        bot.persona ??= Rules.Persona.Random(rng);
+        var move = Rules.SmartMove(bot.hand, lastCombo, minOpp, bot.persona, rng);
+        if (move == null && lastCombo == null) move = Rules.BotMove(bot.hand, null); // 판을 열 땐 패스 불가
         if (move == null || !Play(turn, move)) Pass(turn);
     }
 
@@ -889,7 +895,7 @@ public partial class BigTwoGame : MonoBehaviour
         if (Online && Btn(new Rect(20, 18, 150, 50), "새로고침")) NetReload(); // 폰에서 당겨서 새로고침이 안 돼서
         if (Online && installable && Btn(new Rect(180, 18, 210, 50), "홈 화면에 추가", true, true)) NetInstall();
         if (inviteCode != "") GUI.Label(new Rect(0, 690, W, 34), $"초대받은 방: {inviteCode}", Style(24, new Color(1f, 0.6f, 0.4f)));
-        GUI.Label(new Rect(0, 860, W, 80), "무늬 ♣ < ♥ < ♦ < ♠ · ♠2가 조커보다 높은 최강 카드 · 패스하면 더미에서 1장 먹기\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
+        GUI.Label(new Rect(0, 860, W, 80), "무늬 ♣ < ♥ < ♦ < ♠ · A < 조커 < 2 (♠2 최강) · 패스하면 더미에서 1장 먹기\n가장 먼저 다 내면 1등 · 나머지는 남은 카드 수로 순위 · 남은 2나 조커 한 장마다 점수 ×2 (점수 낮을수록 좋음)", Style(20, new Color(0.5f, 0.48f, 0.45f)));
     }
 
     // 카드 옵션 두 줄: [1팩][2팩][조커] / [7장][9장][13장]. edit=false면 보기만

@@ -6,7 +6,8 @@ public class Card
 {
     public int id, r, s; // r: 0=3 … 11=A, 12=2, 13=조커 / s: 0♣ 1♥ 2♦ 3♠ (클 < 하 < 다 < 스)
     public bool Joker => r == 13;
-    public int Val => r == 12 && s == 3 ? 62 : r * 4 + s; // ♠2는 조커보다도 높은 최강 카드
+    // 세기: 3 … A < 조커 < ♣2 < ♥2 < ♦2 < ♠2(최강). 조커는 ♣2 바로 아래라 2가 나오면 못 낸다
+    public int Val => Joker ? 118 + (s == 3 ? 1 : 0) : r == 12 ? 120 + s * 2 : r * 10 + s * 2;
     public bool Heavy => r >= 12; // 2나 조커: 남으면 점수 ×2
 
     static readonly string[] Ranks = { "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2" };
@@ -150,6 +151,90 @@ public static class Rules
                 rest.Insert(0, src[i]);
                 yield return rest;
             }
+    }
+
+    // ---------- 중급 봇: 성격 + 랜덤 ----------
+    public class Persona
+    {
+        public float dump, save, block, passBias, noise;
+        public static Persona Random(System.Random rng) => new Persona
+        {
+            dump = 0.5f + (float)rng.NextDouble() * 1.5f,      // 여러 장 한꺼번에 털기 좋아함
+            save = (float)rng.NextDouble() * 2f,               // 2·조커 아끼기
+            block = 0.5f + (float)rng.NextDouble() * 1.5f,     // 상대가 거의 다 냈을 때 막기
+            passBias = (float)rng.NextDouble() * 0.35f,        // 일부러 패스하는 버릇
+            noise = 0.8f + (float)rng.NextDouble() * 1.6f,     // 엉뚱함
+        };
+    }
+
+    static bool Strong(Card c) => c.Val >= 110; // 조커·2
+
+    // 낼 수 있는 수 후보 (조합 폭발을 막으려고 대표적인 것만)
+    public static List<List<Card>> Moves(List<Card> hand, Combo last)
+    {
+        var all = new List<List<Card>>();
+        var sorted = hand.OrderBy(x => x.Val).ToList();
+        var byRank = sorted.GroupBy(x => x.r).ToDictionary(g => g.Key, g => g.ToList());
+        bool want(int n) => last == null || last.type == n;
+        if (want(1)) all.AddRange(sorted.Select(c => new List<Card> { c }));
+        foreach (var g in byRank.Values)
+        {
+            if (want(2)) all.AddRange(Subsets(g, 2).Take(12));
+            if (want(3)) all.AddRange(Subsets(g, 3).Take(12));
+        }
+        if (want(5))
+        {
+            for (int st = 0; st + 4 < 12; st++)
+            {
+                var win = Enumerable.Range(st, 5).ToList();
+                if (!win.All(byRank.ContainsKey)) continue;
+                all.Add(win.Select(r => byRank[r].First()).ToList());
+                all.Add(win.Select(r => byRank[r].Last()).ToList());
+            }
+            foreach (var f in sorted.Where(x => !x.Joker).GroupBy(x => x.s).Select(g => g.ToList()).Where(l => l.Count >= 5))
+                for (int i = 0; i + 5 <= f.Count; i++) all.Add(f.Skip(i).Take(5).ToList());
+            var normal = byRank.Where(kv => kv.Key < 13).ToList();
+            foreach (var t in normal.Where(kv => kv.Value.Count >= 3))
+                foreach (var p in normal.Where(kv => kv.Key != t.Key && kv.Value.Count >= 2))
+                    all.Add(t.Value.Take(3).Concat(p.Value.Take(2)).ToList());
+            foreach (var q in normal.Where(kv => kv.Value.Count >= 4))
+            {
+                var kick = sorted.FirstOrDefault(x => x.r != q.Key && !x.Joker);
+                if (kick != null) all.Add(q.Value.Take(4).Append(kick).ToList());
+            }
+            foreach (var fv in normal.Where(kv => kv.Value.Count >= 5)) all.Add(fv.Value.Take(5).ToList());
+        }
+        return all.Where(m => { var c = Eval(m); return c != null && (last == null || c.Beats(last)); }).ToList();
+    }
+
+    // 후보마다 점수를 매기고, 성격과 랜덤을 섞어 고른다. null이면 패스
+    public static List<Card> SmartMove(List<Card> hand, Combo last, int minOpp, Persona me, System.Random rng)
+    {
+        var moves = Moves(hand, last);
+        if (moves.Count == 0) return null;
+        bool danger = minOpp <= 2;           // 누가 거의 다 냈다
+        bool endgame = hand.Count <= 5;      // 2·조커가 남으면 ×2 벌점
+        float Score(List<Card> m)
+        {
+            var cb = Eval(m);
+            float avg = (float)m.Average(c => c.Val) / 120f; // 0~1, 클수록 센 패
+            int strong = m.Count(Strong);
+            float sc = 0;
+            sc += m.Count * 0.6f * me.dump;                        // 많이 털수록 좋음
+            sc -= avg * (danger ? -2.5f * me.block : 2.2f);        // 평소엔 약한 패부터, 위험하면 센 패로 막기
+            if (!endgame) sc -= strong * 1.2f * me.save;           // 강한 카드는 아끼고
+            else sc += strong * 0.8f;                              // 끝판엔 2·조커부터 털기
+            if (last == null && cb.type == 5) sc += 1.5f;          // 5장으로 판 열기
+            if (last == null && cb.type > 1) sc += 0.5f * cb.type;  // 판을 열 땐 묶어서 내기 (페어·트리플)
+            if (last == null && minOpp <= 3 && cb.type > minOpp) sc += 3f; // 상대가 같은 장수로 못 받게
+            if (m.Count == hand.Count) sc += 100;                  // 이걸로 끝나면 무조건
+            return sc + (float)rng.NextDouble() * me.noise;        // 같은 상황에도 다르게
+        }
+        var best = moves.OrderByDescending(Score).First();
+        // 일부러 패스: 센 카드를 써야만 받을 수 있고, 급하지 않을 때
+        // (패스하면 1장 먹으니 드물게: 강한 카드가 꼭 필요하고 손패가 넉넉할 때만)
+        if (last != null && !danger && hand.Count >= 8 && best.All(Strong) && rng.NextDouble() < 0.1 + me.passBias) return null;
+        return best;
     }
 
     // 봇: 낼 수 있는 것 중 가장 약한 패를 낸다. 못 내면 null(패스)
