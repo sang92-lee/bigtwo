@@ -339,12 +339,17 @@ public partial class BigTwoGame : MonoBehaviour
         sfx = gameObject.AddComponent<AudioSource>();
         tickSrc = gameObject.AddComponent<AudioSource>();
         // 카드가 펠트에 "탁" 내려앉는 소리: 낮은 쿵 + 부드럽게 깎은 종이 소리
-        float lp = 0;
-        snapClip = Synth(0.12f, (t, i) =>
+        // 카드 내려놓는 "찹": 짧고 또렷한 종이 마찰음 + 낮은 톡. (잡음을 한 번 걸러 날카로운 지직거림은 뺌)
+        float prev = 0, band = 0;
+        snapClip = Synth(0.09f, (t, i) =>
         {
-            lp += ((float)(rng.NextDouble() * 2 - 1) - lp) * 0.15f;
-            float attack = Mathf.Clamp01(t / 0.003f); // 시작을 살짝 부드럽게 (톡 튀는 소리 방지)
-            return attack * (Mathf.Sin(t * 2 * Mathf.PI * 170f) * Mathf.Exp(-t * 50f) * 0.35f + lp * Mathf.Exp(-t * 80f) * 0.25f);
+            float nz = (float)(rng.NextDouble() * 2 - 1);
+            float hp = nz - prev; prev = nz;          // 고음 쪽만
+            band += (hp - band) * 0.45f;              // 너무 날카로운 끝은 깎기
+            float attack = Mathf.Clamp01(t / 0.0015f);
+            float slap = band * Mathf.Exp(-t * 75f) * 0.55f;
+            float body = Mathf.Sin(t * 2 * Mathf.PI * 230f) * Mathf.Exp(-t * 90f) * 0.22f;
+            return attack * (slap + body);
         });
         // 조커 먹을 때: 위로 올라가는 반짝 화음
         shineClip = Synth(1.2f, (t, i) =>
@@ -630,9 +635,9 @@ public partial class BigTwoGame : MonoBehaviour
         // 한 장씩 착착 내려앉는 소리
         for (int k = 0; k < count; k++)
         {
-            sfx.pitch = 0.92f + (float)rng.NextDouble() * 0.16f;
-            sfx.PlayOneShot(snapClip, 0.55f);
-            yield return new WaitForSeconds(0.045f);
+            sfx.pitch = 0.9f + (float)rng.NextDouble() * 0.2f;
+            sfx.PlayOneShot(snapClip, 0.7f);
+            yield return new WaitForSeconds(0.075f); // 찹, 찹, 찹
         }
         sfx.pitch = 1;
         yield return new WaitForSeconds(0.1f);
