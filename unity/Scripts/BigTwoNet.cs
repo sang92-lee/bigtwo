@@ -58,7 +58,9 @@ public partial class BigTwoGame
     {
         public string k = "state";
         public int phase, you, turn, lastBy, round, packs, pile, lobbySeats, deal;
-        public float turnTime;
+        public float turnTime, bubbleLeft;
+        public int bubbleWho;
+        public string bubble;
         public bool jokers;
         public float timeLeft;
         public bool hasLast;
@@ -141,8 +143,7 @@ public partial class BigTwoGame
     void StartOnline()
     {
         numPlayers = Mathf.Max(lobbySeats, players.Count);
-        for (int i = players.Count, b = 0; i < numPlayers; i++, b++)
-            players.Add(new Player { name = BotNames[b % BotNames.Length], bot = true });
+        AddBots(numPlayers);
         round = 0;
         PlaceSeats();
         StartRound();
@@ -221,6 +222,7 @@ public partial class BigTwoGame
             Play(i, cards);
         }
         else if (m.k == "pass" && lastCombo != null) Pass(i);
+        else if (m.k == "dragon" && lastCombo == null && Rules.HasDragon(players[i].hand)) Dragon(i);
     }
 
     void OnClientLeft(string from)
@@ -254,7 +256,7 @@ public partial class BigTwoGame
     View ViewFor(int i) => new View
     {
         phase = (int)phase, you = i, turn = turn, lastBy = lastBy, round = round, packs = packs, pile = drawPile.Count,
-        lobbySeats = lobbySeats, deal = dealCount, jokers = jokers, turnTime = TurnTime, timeLeft = Mathf.Max(0, turnEnd - Time.time), hasLast = lastCombo != null,
+        lobbySeats = lobbySeats, deal = dealCount, jokers = jokers, turnTime = TurnTime, bubble = bubbleText, bubbleWho = bubbleWho, bubbleLeft = Mathf.Max(0, bubbleUntil - Time.time), timeLeft = Mathf.Max(0, turnEnd - Time.time), hasLast = lastCombo != null,
         lastText = lastText, room = roomCode,
         names = players.Select(p => p.name).ToArray(),
         peers = players.Select(p => p.peer ?? "").ToArray(),
@@ -298,6 +300,7 @@ public partial class BigTwoGame
         lastText = v.lastText;
         drawPile = Enumerable.Range(0, v.pile).Select(_ => new Card { id = -1 }).ToList();
         turnEnd = Time.time + v.timeLeft;
+        if (v.bubbleLeft > 0) { bubbleText = v.bubble; bubbleWho = R(v.bubbleWho); bubbleUntil = Time.time + v.bubbleLeft; }
         results = phase == Phase.End
             ? v.results.Select(r => new Result { p = players[R(r.who)], left = r.left, heavy = r.heavy, score = r.score }).ToList()
             : null;

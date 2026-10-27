@@ -196,6 +196,25 @@ public static class Rules
     public class Persona
     {
         public float dump, save, block, passBias, noise;
+        public bool hoard;          // 패스로 카드 모아서 큰 조합·용 노리기
+        public string name;
+        public string[] playLines, passLines;
+
+        // 이름과 성격을 짝지은 봇들 (게임 내내 그 성격)
+        public static List<Persona> Cast() => new List<Persona>
+        {
+            new Persona { name = "올인 이씨", dump = 2.2f, save = 0.2f, block = 1.5f, passBias = 0f, noise = 1f,
+                playLines = new[] { "다 받아라!", "아끼면 뭐해", "털자 털어", "가즈아" }, passLines = new[] { "...없네", "칫" } },
+            new Persona { name = "짠돌이 김씨", dump = 0.8f, save = 2.6f, block = 1f, passBias = 0.15f, noise = 0.8f,
+                playLines = new[] { "이 정도면 됐지", "2는 안 써", "아껴야 잘 살지" }, passLines = new[] { "패스. 아껴둬야지", "공짜 카드 감사" } },
+            new Persona { name = "패 모으는 할매", hoard = true, dump = 1.4f, save = 1.6f, block = 1f, passBias = 0.2f, noise = 1f,
+                playLines = new[] { "옛다", "할매 아직 안 죽었다", "모은 거 푼다" }, passLines = new[] { "한 장 더 주게", "패스~ 모으는 중", "용 한번 보자" } },
+            new Persona { name = "길막 최", dump = 1f, save = 1f, block = 2.6f, passBias = 0.05f, noise = 0.9f,
+                playLines = new[] { "어딜 나가", "못 지나간다", "막는다" }, passLines = new[] { "흠…", "다음엔 막는다" } },
+            new Persona { name = "무지성 박", dump = 1f, save = 0.5f, block = 0.8f, passBias = 0.12f, noise = 3.5f,
+                playLines = new[] { "아무거나!", "느낌 왔다", "ㅋㅋ", "이거 맞나?" }, passLines = new[] { "몰라 패스", "졸려" } },
+        };
+
         public static Persona Random(System.Random rng) => new Persona
         {
             dump = 0.5f + (float)rng.NextDouble() * 1.5f,      // 여러 장 한꺼번에 털기 좋아함
@@ -298,7 +317,7 @@ public static class Rules
             sc -= avg * (danger ? -2.5f * me.block : 2.2f);        // 평소엔 약한 패부터, 위험하면 센 패로 막기
             if (!endgame) sc -= strong * 1.2f * me.save;           // 강한 카드는 아끼고
             else sc += strong * 0.8f;                              // 끝판엔 2·조커부터 털기
-            if (last == null && cb.type == 5) sc += 1.5f;          // 5장으로 판 열기
+            if (last == null && cb.type == 5) sc += me.hoard ? 4f : 1.5f; // 5장으로 판 열기 (할매는 특히)
             if (last == null && cb.type > 1) sc += 0.5f * cb.type;  // 판을 열 땐 묶어서 내기 (페어·트리플)
             if (last == null && minOpp <= 3 && cb.type > minOpp) sc += 3f; // 상대가 같은 장수로 못 받게
             if (m.Count == hand.Count) sc += 100;                  // 이걸로 끝나면 무조건
@@ -308,7 +327,17 @@ public static class Rules
         // 일부러 패스: 센 카드를 써야만 받을 수 있고, 급하지 않을 때
         // (패스하면 1장 먹으니 드물게: 강한 카드가 꼭 필요하고 손패가 넉넉할 때만)
         if (last != null && !danger && hand.Count >= 8 && best.All(Strong) && rng.NextDouble() < 0.1 + me.passBias) return null;
+        // 할매: 급하지 않으면 패스로 카드를 모아 용(3~A)을 노린다
+        if (me.hoard && last != null && !danger && hand.Count < 15 && Eval(best).type != 5 && rng.NextDouble() < 0.45) return null;
         return best;
+    }
+
+    // 용: 3부터 A까지 12개 숫자가 다 있으면 판을 여는 차례에 손패를 한 번에 다 내고 1등
+    public static bool HasDragon(List<Card> hand)
+    {
+        var have = new HashSet<int>(hand.Where(c => !c.Joker).Select(c => c.r));
+        int missing = Enumerable.Range(0, 12).Count(r => !have.Contains(r));
+        return missing <= hand.Count(c => c.Joker); // 빈 숫자는 조커로 메워도 됨
     }
 
     // 봇: 낼 수 있는 것 중 가장 약한 패를 낸다. 못 내면 null(패스)

@@ -37,7 +37,6 @@ public partial class BigTwoGame : MonoBehaviour
 
     Phase phase = Phase.Menu;
     int numPlayers = 4, packs = 1;
-    static readonly string[] BotNames = { "검은 모자", "말 없는 자", "그림자", "외눈", "늙은 손" };
     string myName;
     bool installable; // 아직 앱으로 설치 안 한 브라우저면 "홈 화면에 추가" 버튼
     readonly List<Player> players = new List<Player>();
@@ -389,7 +388,7 @@ public partial class BigTwoGame : MonoBehaviour
         players.Clear();
         players.Add(new Player { name = string.IsNullOrWhiteSpace(myName) ? "나" : myName.Trim() });
         PlayerPrefs.SetString("name", myName);
-        for (int i = 1; i < numPlayers; i++) players.Add(new Player { name = BotNames[i - 1], bot = true });
+        AddBots(numPlayers);
         round = 0;
         PlaceSeats();
         StartRound();
@@ -412,7 +411,6 @@ public partial class BigTwoGame : MonoBehaviour
             int v = players[i].hand.Min(c => c.Val);
             if (v < best) { best = v; first = i; }
         }
-        foreach (var p in players) p.persona = Rules.Persona.Random(rng); // 판마다 봇 성격이 바뀜
         lastCombo = null; lastCards.Clear(); lastBy = -1; passes = 0;
         selected.Clear();
         results = null;
@@ -455,6 +453,7 @@ public partial class BigTwoGame : MonoBehaviour
         passes = 0;
         lastText = $"{p.name} · {combo.name}";
         OnCardsPlayed(i, cards.Count);
+        MaybeSay(i, true);
         if (p.hand.Count == 0) { EndRound(i); return true; }
         SetTurn(Next(i));
         return true;
@@ -465,6 +464,7 @@ public partial class BigTwoGame : MonoBehaviour
         if (lastCombo == null) return;
         passes++;
         sfx.PlayOneShot(passClip, 0.7f);
+        MaybeSay(i, false);
         string drew = "";
         if (drawPile.Count > 0)
         {
@@ -517,9 +517,56 @@ public partial class BigTwoGame : MonoBehaviour
         int minOpp = players.Where((p, k) => k != turn).Min(p => p.hand.Count);
         var bot = players[turn];
         bot.persona ??= Rules.Persona.Random(rng);
+        if (lastCombo == null && Rules.HasDragon(bot.hand)) { Dragon(turn); return; }
         var move = Rules.SmartMove(bot.hand, lastCombo, minOpp, bot.persona, rng);
         if (move == null && lastCombo == null) move = Rules.BotMove(bot.hand, null); // 판을 열 땐 패스 불가
         if (move == null || !Play(turn, move)) Pass(turn);
+    }
+
+    // 봇은 이름=성격. 섞어서 빈자리 수만큼
+    void AddBots(int upTo)
+    {
+        var cast = Rules.Persona.Cast().OrderBy(_ => rng.Next()).ToList();
+        for (int b = 0; players.Count < upTo; b++)
+        {
+            var pr = cast[b % cast.Count];
+            players.Add(new Player { name = pr.name, bot = true, persona = pr });
+        }
+    }
+
+    // 용: 손패 전부를 한 번에
+    void Dragon(int i)
+    {
+        var p = players[i];
+        lastCards = p.hand.OrderBy(c => c.Val).ToList();
+        lastCombo = null;
+        lastBy = i;
+        lastText = $"{p.name} · 용!! 3부터 A까지 한 번에";
+        p.hand.Clear();
+        Say(i, i == 0 ? null : "용이다!!");
+        sfx.PlayOneShot(shineClip, 0.9f);
+        OnCardsPlayed(i, Mathf.Min(lastCards.Count, 6));
+        Toast("용!!");
+        EndRound(i);
+    }
+
+    // 봇 혼잣말 말풍선
+    string bubbleText = "";
+    int bubbleWho = -1;
+    float bubbleUntil;
+
+    void Say(int who, string line)
+    {
+        if (string.IsNullOrEmpty(line)) return;
+        bubbleWho = who; bubbleText = line; bubbleUntil = Time.time + 2.2f;
+    }
+
+    void MaybeSay(int who, bool played)
+    {
+        var pr = players[who].persona;
+        if (!players[who].bot || pr == null || rng.NextDouble() > 0.35) return;
+        var lines = played ? pr.playLines : pr.passLines;
+        if (lines != null && lines.Length > 0) Say(who, lines[rng.Next(lines.Length)]);
     }
 
     // 내 턴 시간: 마지막 5초는 똑딱, 다 되면 자동 패스 (판을 여는 차례면 가장 약한 패를 냄)
@@ -805,6 +852,11 @@ public partial class BigTwoGame : MonoBehaviour
                 GUI.Label(new Rect(0, 574, W, 34), msg, Style(24, good ? new Color(0.55f, 0.95f, 0.6f) : new Color(1f, 0.5f, 0.4f), TextAnchor.MiddleCenter, FontStyle.Bold));
             }
 
+            if (lastCombo == null && Rules.HasDragon(players[0].hand) &&
+                Btn(new Rect(W / 2 - 200, 520, 400, 70), "용! 한 번에 다 내기", true, true))
+            {
+                if (mode == NetMode.Client) SendAction("dragon"); else Dragon(0);
+            }
             if (Btn(new Rect(W / 2 + 240, 612, 150, 68), "추천"))
             {
                 var hint = Rules.BotMove(players[0].hand, lastCombo);
@@ -834,6 +886,19 @@ public partial class BigTwoGame : MonoBehaviour
     // 지금 차례인 상대 머리 위: 주황 띠(이름·남은 시간) + 통통 튀는 ▼
     void DrawTurnMarker()
     {
+        if (Time.time < bubbleUntil && bubbleWho > 0 && bubbleWho < players.Count && players[bubbleWho].seat != null)
+        {
+            var bp = cam.WorldToScreenPoint(players[bubbleWho].seat.root.transform.position + Vector3.up * 2.0f);
+            if (bp.z > 0)
+            {
+                float s2 = UiScale, bx = bp.x / s2, by = (Screen.height - bp.y - (Screen.height - 1000 * s2) / 2) / s2;
+                var bs = Style(24, new Color(0.1f, 0.08f, 0.07f), TextAnchor.MiddleCenter, FontStyle.Bold);
+                float bw = bs.CalcSize(new GUIContent(bubbleText)).x + 34;
+                var br = new Rect(Mathf.Min(bx + 34, VW - bw - 10), by + 4, bw, 44); // 머리 오른쪽 옆 (화면 밖이면 안쪽으로)
+                GUI.DrawTexture(br, cardTex, ScaleMode.StretchToFill); // 흰 말풍선
+                GUI.Label(br, bubbleText, bs);
+            }
+        }
         if (phase != Phase.Play || turn <= 0 || turn >= players.Count || players[turn].seat == null) return;
         var head = players[turn].seat.root.transform.position + Vector3.up * 2.0f;
         var sp = cam.WorldToScreenPoint(head);
