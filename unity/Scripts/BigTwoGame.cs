@@ -746,6 +746,7 @@ public partial class BigTwoGame : MonoBehaviour
             }
         }
 
+        DrawTurnMarker();
         DrawHand(W);
 
         if (phase == Phase.Play && turn == 0)
@@ -805,6 +806,25 @@ public partial class BigTwoGame : MonoBehaviour
         if (mode != NetMode.Solo && Btn(new Rect(20, 18, 170, 50), micOn ? "마이크 끄기" : "마이크 켜기", true, micOn)) NetMic(!micOn);
         if (phase == Phase.End) DrawEnd(W);
         else if (Btn(new Rect(W - 130, 18, 110, 50), "그만")) LeaveRoom();
+    }
+
+    // 지금 차례인 상대 머리 위: 주황 띠(이름·남은 시간) + 통통 튀는 ▼
+    void DrawTurnMarker()
+    {
+        if (phase != Phase.Play || turn <= 0 || turn >= players.Count || players[turn].seat == null) return;
+        var head = players[turn].seat.root.transform.position + Vector3.up * 2.0f;
+        var sp = cam.WorldToScreenPoint(head);
+        if (sp.z < 0) return;
+        float sc = UiScale;
+        float x = sp.x / sc, y = (Screen.height - sp.y - (Screen.height - 1000 * sc) / 2) / sc;
+        float bob = Mathf.Sin(Time.time * 5f) * 6f;
+        string txt = players[turn].bot ? players[turn].name : $"{players[turn].name} · {Mathf.CeilToInt(Mathf.Max(0, turnEnd - Time.time))}초";
+        var st = Style(24, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+        float w = Mathf.Max(120, st.CalcSize(new GUIContent(txt)).x + 30);
+        var r = new Rect(x - w / 2, y - 70 + bob, w, 42);
+        GUI.DrawTexture(r, selTex, ScaleMode.StretchToFill);
+        GUI.Label(r, txt, st);
+        GUI.Label(new Rect(x - 20, r.yMax - 6, 40, 30), "▼", Style(26, new Color(1f, 0.6f, 0.35f), TextAnchor.MiddleCenter, FontStyle.Bold));
     }
 
     void DrawToast(float W)
