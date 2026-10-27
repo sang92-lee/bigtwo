@@ -21,6 +21,9 @@ sed -i '' -E "s#(\.unityweb|\.loader\.js)\"#\1?v=$STAMP\"#g" $REPO/public/index.
 
 # 홈 화면에 추가(앱처럼 설치): 아이콘·manifest·서비스 워커
 cp web/* $REPO/public/
+# 자동 업데이트: 열 때 서버의 최신 번호와 비교해서 다르면 스스로 새로 불러옴
+echo $STAMP > $REPO/public/version.txt
+export STAMP
 python3 - $REPO/public/index.html <<'P'
 import sys
 f=sys.argv[1]; s=open(f).read()
@@ -30,7 +33,12 @@ head = ('<link rel="manifest" href="manifest.webmanifest">'
         '<meta name="apple-mobile-web-app-capable" content="yes">'
         '<meta name="apple-mobile-web-app-title" content="빅 투">')
 # 카톡 안 브라우저면 바로 폰 기본 브라우저로 다시 연다 (설치·마이크가 거기서만 됨)
-head = ("<script>if(/KAKAOTALK/i.test(navigator.userAgent)){location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href);}</script>") + head
+import os
+stamp = os.environ.get("STAMP", "0")
+upd = ("<script>(function(){var mine='" + stamp + "';"
+       "fetch('version.txt?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.text()}).then(function(v){v=v.trim();"
+       "if(v&&v!==mine){var q=new URLSearchParams(location.search);q.set('v',v);location.replace(location.pathname+'?'+q.toString());}}).catch(function(){});})();</script>")
+head = upd + ("<script>if(/KAKAOTALK/i.test(navigator.userAgent)){location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href);}</script>") + head
 s = s.replace('<link rel="shortcut icon" href="TemplateData/favicon.ico">', '<link rel="icon" href="icon-192.png">' + head)
 s = s.replace('</body>', "<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');"
               "addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.BTinstall=e;});</script></body>")
