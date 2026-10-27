@@ -839,7 +839,7 @@ public partial class BigTwoGame : MonoBehaviour
                 if (mode == NetMode.Client) SendAction("pass"); else Pass(0);
             }
             if (lastCombo == null && sel.Count == 0) GUI.Label(new Rect(0, 470, W, 34), "아무 조합이나 낼 수 있어요", Style(22, new Color(0.7f, 0.68f, 0.62f)));
-            if (lastCombo != null && playable.Count == 0) GUI.Label(new Rect(0, 574, W, 34), "낼 수 있는 패가 없어요 · 패스", Style(24, new Color(0.75f, 0.7f, 0.65f)));
+            if (lastCombo != null && playable.Count == 0 && sel.Count == 0) GUI.Label(new Rect(0, 574, W, 34), "낼 수 있는 패가 없어요 · 패스", Style(24, new Color(0.75f, 0.7f, 0.65f)));
 
             // 고른 패 미리보기
             if (sel.Count > 0)
