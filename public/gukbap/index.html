@@ -43,16 +43,16 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 .pot:active i { transform: scale(.93) }
 @keyframes bob { to { transform: scale(1.07) } }
 #kitchen { display: grid; grid-template-columns: 92px 1fr; gap: 12px; align-items: end }
-#pour { position: relative; height: 112px; margin: 0 8px 12px; padding: 0; overflow: visible; touch-action: none; background: #eef2f2 linear-gradient(90deg, #9fabab, #eef2f2 35%, #c6d0d0 80%, #8f9a9a); border: 3px solid var(--ink); border-top-width: 6px; border-radius: 3px 3px 12px 12px; box-shadow: inset 0 0 0 2px #fff6 }
+#pour { position: relative; height: 112px; margin: 0 8px 12px; padding: 0; overflow: visible; touch-action: none; background: #17231f; border: 3px solid var(--ink); border-top-width: 6px; border-radius: 3px 3px 12px 12px; box-shadow: inset 0 0 0 2px #dfe6e6 }
 #pour::before, #pour::after { content: ""; position: absolute; top: 12px; width: 9px; height: 22px; border: 3px solid var(--ink); }
 #pour::before { left: -13px; border-right: 0; border-radius: 8px 0 0 8px } #pour::after { right: -13px; border-left: 0; border-radius: 0 8px 8px 0 }
-#brothIn { position: absolute; left: 3px; right: 3px; bottom: 3px; background: linear-gradient(#fff6dc, #e9cf9c); border-radius: 0 0 8px 8px }
-#brothGold::after { content: "딱"; position: absolute; right: -2px; top: -18px; font: 400 14px var(--display); color: var(--sign-ink); text-shadow: 0 0 3px #fff }
-#brothGold { position: absolute; left: -5px; right: -5px; height: 5px; background: #ffb800; box-shadow: 0 0 6px 1px #ffd21f; z-index: 1 }
-#brothText { position: absolute; inset: auto 0 4px; text-align: center; z-index: 2; font: 400 14px var(--display); color: var(--ink); text-shadow: 0 0 3px #fff }
-#pour.on { box-shadow: 0 8px 0 -2px #ff8a1f, 0 12px 10px 0 #ff5a1f, inset 0 0 0 2px #fff6 }
+#brothIn { position: absolute; left: 3px; right: 3px; bottom: 3px; background: linear-gradient(#ffc93c, #f08a1d); border-top: 4px solid #fff; border-radius: 0 0 8px 8px }
+#brothGold::after { content: "딱"; position: absolute; right: -2px; top: -18px; font: 400 14px var(--display); color: #fff; text-shadow: 0 0 3px #d8321e, 0 0 3px #d8321e, 0 1px 2px #000 }
+#brothGold { position: absolute; left: -7px; right: -7px; height: 6px; background: #fff; box-shadow: 0 0 0 2px #d8321e; z-index: 3 }
+#brothText { position: absolute; inset: auto 0 4px; text-align: center; z-index: 4; font: 400 15px var(--display); color: #fff; text-shadow: 0 0 3px #000, 0 1px 2px #000 }
+#pour.on { box-shadow: 0 8px 0 -2px #ff8a1f, 0 12px 10px 0 #ff5a1f, inset 0 0 0 2px #dfe6e6 }
 #pour.bad { animation: bob .4s infinite alternate }
-#pour.bad #brothIn { background: linear-gradient(#ffb19e, #ff7a59) }
+#pour.bad #brothIn { background: linear-gradient(#ff6a4d, #d8321e) }
 #acts[hidden], .act[hidden], #pour[hidden] { display: none }
 #app.noBroth #pour { display: none } #app.noBroth #kitchen { grid-template-columns: 1fr }
 #acts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px }
@@ -90,7 +90,7 @@ td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400
   <div id="desk">
     <div id="cue" role="status"></div>
     <div id="kitchen">
-      <button id="pour" aria-label="육수통, 누르고 있다가 금색 선에서 떼기"><b id="brothIn"></b><i id="brothGold"></i><em id="brothText">육수통</em></button>
+      <button id="pour" aria-label="육수통, 누르고 있다가 흰 선에서 떼기"><b id="brothIn"></b><i id="brothGold"></i><em id="brothText">육수통</em></button>
       <div id="pots"></div>
     </div>
     <div id="acts">
@@ -381,7 +381,7 @@ function serve(g, i) {
 }
 function tapPot(g, i) { const r = press(g, i); if (r) serve(g, i); return r; }
 
-// 금색 선에서 손을 떼면 황금 육수가 된다
+// 흰 선에서 손을 떼면 황금 육수가 된다
 function pourEnd(g) {
   const d = g.d; if (!d.pouring) return null;
   d.pouring = false;
@@ -693,7 +693,7 @@ function ending(a, b) {
 const TUT = {
   pot: { text: '줄어드는 빨간 원이 솥에 겹칠 때 딱 누르세요!', start(d) { d.tutShop = 0; d.pots[0].s = 'cook'; d.pots[0].t = APPROACH + .5; d.pots[1].t = 99; }, done: d => d.perfect > 0 || d.served[0] > 1,
     finger(d) { const r = rel($('pots').children[0]); return [r.x + r.w * .88, r.y + r.h * .88, r.x + r.w * .88, r.y + r.h * .88]; } },
-  broth: { text: '육수통을 꾹 누르고 있다가 금색 선에서 딱 떼세요!', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
+  broth: { text: '육수통을 꾹 누르고 있다가 흰 선에서 딱 떼세요!', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
     finger(d) { const r = rel($('pour')); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
   steal: { text: '옆집 손님을 끌어서 우리 집에 놓으세요', start(d) { d.tutShop = 1; }, done: d => d.stolen > 0,
     finger(d) { const c = queue(d, 1)[0], r = rel($('cv')); return c ? [r.x + c.px * r.w, r.y + c.py * r.h, r.x + r.w * .25, r.y + r.h * .62] : null; } },
@@ -705,7 +705,7 @@ const TUT = {
 let tut = null;
 const WHY = {
   pot: ['오늘 배울 것: 솥', '국밥은 끓는 순간에 내야 제일 맛있어요.\n\n빨간 원이 솥에 겹칠 때 누르면 딱!\n딱! 맞출수록 국밥이 맛있어지고 비싸게 팔려요.\n\n오늘은 이것만 하면 돼요.'],
-  broth: ['오늘 배울 것: 육수통', '국밥을 팔수록 육수가 줄어요.\n바닥나면 맹물 국밥이 나가서 손님이 화내요.\n\n육수통을 꾹 눌러 채우세요.\n금색 선에서 떼면 더 맛있는 황금 육수가 돼요.'],
+  broth: ['오늘 배울 것: 육수통', '국밥을 팔수록 육수가 줄어요.\n바닥나면 맹물 국밥이 나가서 손님이 화내요.\n\n육수통을 꾹 눌러 채우세요.\n흰 선에서 떼면 더 맛있는 황금 육수가 돼요.'],
   raid: ['오늘 배울 것: 왕사장 막기', '왕사장이 우리 손님을 뺏으러 건너와요!\n그냥 두면 손님을 데려가요.\n\n노란 조준이 초록색으로 변할 때 뚝배기를 던져 맞히면, 왕사장이 자빠지고 손님을 지켜요.'],
   banner: ['오늘 배울 것: 현수막 찢기', '옆집이 현수막을 걸면 손님이 옆집으로 몰려요.\n현수막을 연타해서 찢으면 손님이 돌아와요.\n\n호객과 공깃밥 서비스 버튼도 오늘부터 쓸 수 있어요.'],
   steal: ['오늘 배울 것: 손님 끌어오기', '이제 우리가 반격할 차례예요.\n옆집 줄의 손님을 손가락으로 끌어 우리 가게에 놓으세요.\n\n왕사장이 "!"를 띄우고 노려볼 때 들키면 벌금이에요.'],
@@ -981,14 +981,14 @@ function hud() {
   const near = d.pots.some(p => p.s === 'cook' && p.t <= APPROACH && queue(d, 0).length), cue = $('cue');
   const bad = soup(d);
   cue.className = near || d.combo > 1 || d.gold || bad !== 'ok' ? 'go' : '';
-  cue.textContent = d.raid ? '왕사장이 손님을 뺏으러 와요! 막으세요' : bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : has(g, 'broth') ? '육수통은 금색 선에서 손을 떼세요' : '손님이 오면 원이 줄어들어요';
+  cue.textContent = d.raid ? '왕사장이 손님을 뺏으러 와요! 막으세요' : bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : has(g, 'broth') ? '육수통은 흰 선에서 손을 떼세요' : '손님이 오면 원이 줄어들어요';
   $('aCall').disabled = d.cd.call > 0;
   $('aRice').disabled = d.cd.rice > 0;
   const level = Math.min(100, d.broth) / 100, inner = $('pour').clientHeight - 3;
   $('brothIn').style.height = level * inner + 'px';
   $('brothGold').style.bottom = 3 + d.target / 100 * inner - 2 + 'px';
   $('pour').classList.toggle('bad', soup(d) !== 'ok' || (d.broth < 35 && !d.pouring));
-  $('brothText').textContent = d.pouring ? '금색에서 떼기' : d.broth < 45 ? '꾹 눌러요!' : '육수통';
+  $('brothText').textContent = d.pouring ? '흰 선에서 떼기' : d.broth < 45 ? '꾹 눌러요!' : '육수통';
   $('bowlN').textContent = d.bowls; $('aBowl').disabled = !canThrow(d);
   $('aBowlNote').textContent = d.bowls <= 0 ? '오늘은 다 썼어요' : canThrow(d) ? '초록색일 때 눌러요' : '왕사장이 오면 막아요';
 }
