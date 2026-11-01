@@ -532,11 +532,66 @@ function clearSave() { try { localStorage.removeItem(SAVE); } catch (e) {} }
 function show(html, wire) { sheet.innerHTML = html; sheet.hidden = false; sheet.scrollTop = 0; wire && wire(); }
 const on = (id, f) => { $(id).onclick = () => { beep(520); f(); }; };
 
+/* 사골 육수: 실제 시간으로 16시간 끓이는 부가 모드. 게임을 꺼도 시간은 흐르고, 안 해도 장사는 할 수 있다 */
+const STOCK_KEY = 'gukbap-stock-1', STOCK_HOURS = 16, CARE_EVERY = 3, HOUR = 3600000;
+function getStock() { try { return JSON.parse(localStorage.getItem(STOCK_KEY)); } catch (e) { return null; } }
+function setStock(v) { try { v ? localStorage.setItem(STOCK_KEY, JSON.stringify(v)) : localStorage.removeItem(STOCK_KEY); } catch (e) {} }
+const stockHours = st => (Date.now() - st.start) / HOUR;
+const careDue = st => { const i = Math.min(4, Math.floor(stockHours(st) / CARE_EVERY) - 1); return i >= 0 && !st.care[i] ? i : -1; };
+const careDone = st => st.care.filter(Boolean).length;
+function clockText(h) { const left = Math.max(0, h), a = Math.floor(left), b = Math.ceil((left - a) * 60); return a ? `${a}시간 ${b}분` : `${b}분`; }
+function stockLabel() {
+  const st = getStock();
+  if (!st) return '사골 육수 16시간 끓이기';
+  const h = stockHours(st);
+  return h >= STOCK_HOURS ? '사골 육수 완성! 가지러 가기' : careDue(st) >= 0 ? '사골 육수: 거품을 걷어 주세요!' : `사골 육수 끓는 중 · ${clockText(STOCK_HOURS - h)} 남음`;
+}
+function drawStockPot(c, fill) {
+  c.clearRect(0, 0, 560, 300);
+  c.fillStyle = '#ff8a1f'; [200, 250, 300, 350].forEach((x, i) => { c.beginPath(); c.moveTo(x - 22, 290); c.quadraticCurveTo(x, 225 - i % 2 * 14, x + 22, 290); c.fill(); });
+  c.fillStyle = '#c6d0d0'; c.fillRect(150, 60, 260, 190);
+  c.fillStyle = '#fff3d4'; c.fillRect(160, 240 - 170 * fill, 240, 170 * fill);
+  c.strokeStyle = '#15342f'; c.lineWidth = 8; c.strokeRect(150, 60, 260, 190);
+  c.strokeRect(120, 90, 30, 40); c.strokeRect(410, 90, 30, 40);
+  c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineCap = 'round';
+  [220, 280, 340].forEach(x => { c.beginPath(); c.moveTo(x, 50); c.quadraticCurveTo(x + 22, 30, x, 8); c.stroke(); });
+}
+function stockView(back) {
+  const st = getStock(), h = st ? stockHours(st) : 0, due = st ? careDue(st) : -1, done = st && h >= STOCK_HOURS;
+  const head = `<h2>할머니의 사골 육수</h2><h1>${done ? '16시간 완성!' : st ? `${Math.floor(h)}시간째 끓는 중` : '16시간의 정성'}</h1><canvas id="hero" width="560" height="300"></canvas>`;
+  let body = '', act = '';
+  if (!st) {
+    body = '<p>할머니는 늘 사골을 16시간 끓이셨어요.\n\n실제 시간으로 16시간이 걸려요. 게임을 꺼도 계속 끓어요.\n3시간마다 들어와 거품을 걷으면 더 맛있어져요.\n\n안 해도 장사는 할 수 있어요.</p>';
+    act = '<button class="main" id="stockAct">불 켜기</button>';
+  } else if (done) {
+    body = `<p>거품을 ${careDone(st)}번 걷었어요. 정성 ${'★'.repeat(careDone(st) + 1)}\n\n장사에 가져가면 처음부터 황금 육수와 맛 보너스를 받아요.</p>`;
+    act = g ? '<button class="main" id="stockAct">가게로 가져가기</button>' : '<p>이어서 하기로 가게 문을 연 뒤 가져갈 수 있어요.</p>';
+  } else if (due >= 0) {
+    body = '<p>육수 위로 거품이 떠올랐어요!</p>';
+    act = '<button class="main" id="stockAct">거품 걷기</button>';
+  } else {
+    const next = (Math.floor(h / CARE_EVERY) + 1) * CARE_EVERY;
+    body = `<p>완성까지 ${clockText(STOCK_HOURS - h)} 남았어요.\n${next <= 15 ? `다음 거품은 ${clockText(next - h)} 뒤에 떠올라요.\n` : ''}지금까지 거품을 ${careDone(st)}번 걷었어요.</p>`;
+  }
+  show(`${head}${body}${act}<button class="ghost" id="stockBack">돌아가기</button>`, () => {
+    drawStockPot($('hero').getContext('2d'), st ? Math.min(1, h / STOCK_HOURS) * .6 + .35 : .95);
+    on('stockBack', back);
+    if (!$('stockAct')) return;
+    on('stockAct', () => {
+      if (!st) setStock({ start: Date.now(), care: [false, false, false, false, false] });
+      else if (done) { g.bigStock = careDone(st) + 1; setStock(null); save(); return back(); }
+      else { st.care[due] = true; setStock(st); sfx.gold(); }
+      stockView(back);
+    });
+  });
+}
+
 function title() {
   const old = load();
   show(`<h2>옆집을 이겨라</h2><h1>국밥 전쟁</h1><canvas id="hero" width="560" height="300"></canvas>
     <p>손님은 셋 중 하나를 봐요.\n<b>가격, 속도, 맛.</b>\n\n국밥을 제때 내고, 옆집 손님을 끌어오고, 현수막을 찢어서 왕사장을 이기세요.</p>
-    <button class="main" id="go">${old ? '새로 시작' : '개업하기'}</button>${old ? '<button class="buy" id="cont">이어서 하기</button>' : ''}`, () => {
+    <button class="main" id="go">${old ? '새로 시작' : '개업하기'}</button>${old ? '<button class="buy" id="cont">이어서 하기</button>' : ''}<button class="ghost" id="stockBtn">${stockLabel()}</button>`, () => {
+    on('stockBtn', () => stockView(title));
     on('go', () => { clearSave(); g = newGame(); snapshot(g); intro(); });
     if (old) on('cont', () => { g = old; morning(); });
     const c = $('hero').getContext('2d'); drawGukbap(c, 190, 190, 120); drawFace(c, 440, 130, 90, 'smug');
@@ -559,7 +614,9 @@ function morning() {
     ${upgrade('uTaste', `맛: 재료 ${g.taste + 1}단계`, g.taste, COST.taste[g.taste], '좋은 재료일수록 맛이 좋고 재료비가 올라요', `옆집 맛 ${ch.rt}단계`)}
     ${upgrade('uFire', `속도: 화력 ${g.fire + 1}단계`, g.fire, COST.fire[g.fire], `끓이는 시간 ${FIRE[g.fire]}초`, `옆집 ${ch.rs}초에 한 그릇`)}
     ${upgrade('uPots', `솥 ${g.pots}개`, g.pots, COST.pots[g.pots - 2], '솥이 많으면 빠르지만 손이 바빠져요', '')}
+    ${g.bigStock ? `<div class="row"><header><b>사골 육수 준비 완료</b></header><div class="note">오늘 처음부터 황금 육수 ${g.bigStock * 5}그릇</div></div>` : `<button class="ghost" id="stockBtn">${stockLabel()}</button>`}
     <button class="main" id="go">문 열기</button>`, () => {
+    if ($('stockBtn')) on('stockBtn', () => stockView(morning));
     $('price').oninput = e => { g.price = +e.target.value; $('pv').textContent = won(g.price); };
     const b = (id, w) => { if (!$(id).disabled) on(id, () => { buy(g, w); morning(); }); };
     b('uTaste', 'taste'); b('uFire', 'fire'); b('uPots', 'pots');
@@ -599,6 +656,10 @@ function openShop() {
   $('app').classList.toggle('noBroth', !has(g, 'broth'));
   $('aBowl').hidden = !has(g, 'raid'); $('aCall').hidden = $('aRice').hidden = !has(g, 'banner');
   $('acts').hidden = !has(g, 'raid');
+  if (g.bigStock) {
+    g.d.big = g.bigStock; g.bigStock = 0; g.d.gold = g.d.big * 5; g.d.flavor = g.d.big * .4;
+    bubbles.push({ x: .25, y: .45, text: '16시간 사골 육수 개시!', t: 2.6, col: '#fff27a' });
+  }
   const fresh = newToday(); if (fresh) tutStart(fresh);
 }
 function dayOver() {
@@ -658,7 +719,7 @@ function tutStart(key) {
 function tutEnd() {
   const d = g.d; g.seen = g.seen || {}; g.seen[tut] = true; tut = null;
   d.pots.forEach(p => { p.s = 'cook'; p.t = cookTime(g); p.lock = null; p.cuts = 0; });
-  Object.assign(d, { flavor: 0, complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
+  Object.assign(d, { flavor: (d.big || 0) * .4, complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: (d.big || 0) * 5, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
   $('hint').hidden = true; $('finger').hidden = true;
   bubbles.push({ x: .5, y: .5, text: '좋아요! 이제 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
 }
