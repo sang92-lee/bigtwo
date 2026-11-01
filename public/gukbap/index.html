@@ -30,6 +30,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 @keyframes ping { from { transform: scale(.55); opacity: 1 } to { transform: scale(1.35); opacity: 0 } }
 .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: none }
 .chip { background: var(--paper); color: var(--ink); padding: 11px 2px; font: 400 15px var(--display) }
+.chips.promo { grid-template-columns: repeat(2, 1fr) } .chip small { display: block; font: 11px var(--body) }
 .chip.on { background: var(--sign); color: var(--sign-ink); box-shadow: inset 0 0 0 3px var(--sign-ink) }
 .main[disabled] { background: #d6dcdb; color: #6d7a78 }
 #sheet > * { flex: none }
@@ -58,10 +59,8 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 #pour.on { box-shadow: 0 8px 0 -2px #ff8a1f, 0 12px 10px 0 #ff5a1f, inset 0 0 0 2px #dfe6e6 }
 #pour.bad { animation: bob .4s infinite alternate }
 #pour.bad #brothIn { background: linear-gradient(#ff6a4d, #d8321e) }
-#acts[hidden], .act[hidden], #pour[hidden] { display: none }
-#app.noBroth #pour { display: none } #app.noBroth #kitchen { grid-template-columns: 1fr }
-#acts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px }
-.act { background: var(--ink); color: var(--paper); padding: 9px 2px; font: 400 16px var(--display); position: relative; overflow: hidden }
+#acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px }
+.act { background: var(--ink); color: var(--paper); padding: 5px 2px; font: 400 16px var(--display); position: relative; overflow: hidden }
 .act small { display: block; font: 12px var(--body); opacity: .8 } .act[disabled] { opacity: .45 }
 #aBowl { background: var(--pot); touch-action: none }
 #sheet { position: absolute; inset: 0; background: var(--tile-deep); color: var(--paper); display: flex; flex-direction: column; gap: 12px; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 18px max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; z-index: 5 }
@@ -99,7 +98,8 @@ td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400
       <div id="pots"></div>
     </div>
     <div id="acts">
-      <button class="act" id="aCall">호객<small>잠깐 손님을 끌어요</small></button>
+      <button class="act" id="aCall">홍보하기<small>전단지로 손님 끌기</small></button>
+      <button class="act" id="aWash">설거지 <span id="washN">0</span><small id="washNote">깨끗한 그릇 8</small></button>
       <button class="act" id="aRice">공깃밥 서비스<small>2,000원 줄 달래기</small></button>
       <button class="act" id="aBowl">뚝배기 던지기 <span id="bowlN">3</span><small id="aBowlNote">왕사장이 오면 막아요</small></button>
     </div>
@@ -156,21 +156,25 @@ const TAUNTS = ['손님 없어 보이네?', '그 국물 맹물 아니야?', '우
 function newGame() { return { ch: 0, day: 0, money: 30000, taste: 0, fire: 0, pots: 2, price: 8000, rep: 0, rp: CHAPTERS[0].rp, weekMe: 0, weekRv: 0, snap: null }; }
 const cookTime = g => FIRE[g.fire];
 const stars = g => Math.max(1, Math.min(5, 3 + g.rep * 1.33));
-// 하루에 하나씩 배운다. 전체 며칠째인지로 무엇이 열렸는지 정한다
-const LEARN = { pot: 0, broth: 1, raid: 2, banner: 3, steal: 4 };
-const stage = g => g.ch * 3 + g.day;
-const has = (g, what) => stage(g) >= LEARN[what];
+const PROMOS = [
+  { name: '전단지 돌리기', cost: 15000, fan: [0], note: '학생이 몰려요' },
+  { name: '점심 쿠폰', cost: 20000, fan: [1], note: '직장인이 몰려요' },
+  { name: '동네 방송', cost: 20000, fan: [2], note: '어르신이 몰려요' },
+  { name: '인스타 올리기', cost: 25000, fan: [3], note: '미식가가 몰려요' },
+];
 const soup = d => d.broth < BROTH_LOW ? 'thin' : 'ok';
 const bowlCost = g => 2200 + g.taste * 500;
 function snapshot(g) { g.snap = { money: g.money, taste: g.taste, fire: g.fire, pots: g.pots, price: g.price }; }
 function restore(g) { g.money = Math.max(g.money, 0) + 30000; g.day = 0; g.weekMe = g.weekRv = 0; g.rep = 0; g.rp = CHAPTERS[g.ch].rp; }
 
 const r0 = () => Math.random();
+// 솥마다 끓는 시간과 원의 속도가 달라서 박자가 어긋난다
+function recook(g, p) { p.s = 'cook'; p.t = cookTime(g) * (.8 + Math.random() * .5); p.app = .8 + Math.random() * .6; p.delay = 0; p.age = 0; p.cuts = 0; }
 function startDay(g) {
   const ch = CHAPTERS[g.ch];
-  const pots = []; for (let i = 0; i < g.pots; i++) pots.push({ s: 'cook', t: cookTime(g) * (.6 + i * .25), age: 0, cuts: 0 });
+  const pots = []; for (let i = 0; i < g.pots; i++) pots.push({ s: 'cook', t: cookTime(g) * (.6 + i * .25), age: 0, cuts: 0, app: APPROACH, delay: i * .7 });
   g.d = { t: 0, next: .3, people: [], pots, sales: [0, 0], served: [0, 0], lost: 0, spent: 0, tips: 0, buff: [0, 0], banner: null, bt: ch.banner * .6,
-    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, complaints: 0, reviews: [], flavor: 0, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0 };
+    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, complaints: 0, reviews: [], flavor: 0, clean: 8, dirty: 0, promoFan: PROMOS[g.promo]?.fan || [], broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0 };
 }
 const queue = (d, shop) => d.people.filter(c => c.shop === shop && c.st === 'queue');
 const coming = (d, shop) => d.people.filter(c => c.shop === shop && (c.st === 'queue' || c.st === 'walk')).length;
@@ -179,7 +183,7 @@ function choose(g, c, r) {
   const d = g.d, ch = CHAPTERS[g.ch], w = TYPES[c.type];
   const mineServe = (cookTime(g) + .8) / g.pots;
   const val = (taste, price, wait) => w.t * taste + w.p * (9000 - price) / 1000 - w.s * wait / 4;
-  const me = val(g.taste + 1.2 + g.rep + (soup(d) !== 'ok' ? -1.5 : d.gold > 0 ? .8 : 0) + Math.min(d.combo * COMBO_PULL, 1.2) + d.flavor * .5 + (d.fan && d.fan.includes(c.type) ? 1.5 : 0), g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
+  const me = val(g.taste + 1.2 + g.rep + (soup(d) !== 'ok' ? -1.5 : d.gold > 0 ? .8 : 0) + Math.min(d.combo * COMBO_PULL, 1.2) + d.flavor * .5 + (d.fan && d.fan.includes(c.type) ? 1.5 : 0) + (d.promoFan.includes(c.type) ? 1.2 : 0), g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
   // 앞서갈수록 왕사장도 악착같이 달라붙는다
   const chase = Math.min(5, Math.max(0, (d.sales[0] - d.sales[1]) / (g.price * 3.5)));
   const rv = val(ch.rt, g.rp, coming(d, 1) * d.rs) + (d.buff[1] > 0 ? 2.2 : 0) + chase;
@@ -201,7 +205,7 @@ function stepDay(g, dt, r = Math.random) {
     const c = { type, x: .5, y: 1.02, st: 'walk', shop: 0, wait: 13 + r() * 6, moved: false, id: Math.random() };
     c.shop = d.tutShop ?? choose(g, c, r); d.people.push(c);
   }
-  if (!d.tut && has(g, 'banner')) d.bt -= dt;
+  if (!d.tut) d.bt -= dt;
   if (d.bt <= 0) {
     d.bt = ch.banner * (.8 + r() * .4);
     const list = BANNERS.concat(CH_BANNERS[g.ch]), [a, b] = list[Math.floor(r() * list.length)];
@@ -214,7 +218,7 @@ function stepDay(g, dt, r = Math.random) {
     if (d.soup !== 'ok') { d.combo = 0; d.ev.push({ k: 'soup', text: '국물이 밍밍해요!' }); }
   }
   // 왕사장은 등을 돌렸다가 예고 뒤 노려보고, 건너오는 동안에는 문을 비운다
-  const b = d.boss; if (!d.tut && has(g, 'steal')) b.t -= dt;
+  const b = d.boss; if (!d.tut) b.t -= dt;
   if (d.raid) b.s = 'away';
   else if (b.t <= 0) {
     if (b.s === 'away') { b.s = 'warn'; b.t = 1; d.ev.push({ k: 'warn' }); }
@@ -227,7 +231,7 @@ function stepDay(g, dt, r = Math.random) {
     if (d.fly.t <= 0) landBowl(g);
   }
   if (b.s === 'watch') for (const c of d.people) if (c.st === 'held') busted(g, c);
-  if (!d.raid && !d.tut) { if (has(g, 'raid')) d.rt -= dt; if (d.rt <= 0) startRaid(d); }
+  if (!d.raid && !d.tut) { d.rt -= dt; if (d.rt <= 0) startRaid(d); }
   else if (!d.tut) {
     d.raid.x -= .46 / 3.2 * dt;
     if (d.raid.x <= .3) {
@@ -260,15 +264,18 @@ function stepDay(g, dt, r = Math.random) {
 
   d.pots.forEach((p, i) => {
     if (p.lock) { p.lockT -= dt; if (p.lockT <= 0) serve(g, i); return; }
-    // 손님이 없으면 원이 줄어들기 직전에서 기다린다
+    // 손님이 없으면 원이 줄어들기 직전에서 기다리고, 손님이 오면 순서대로 출발한다
     if (p.s === 'cook') {
-      if (p.t > APPROACH || queue(d, 0).length) p.t -= dt;
+      if (p.t > p.app) p.t -= dt;
+      else if (!queue(d, 0).length) p.delay = i * .7 + Math.random() * .6;
+      else if (p.delay > 0) p.delay -= dt;
+      else p.t -= dt;
       if (p.t <= 0) { p.s = 'ready'; p.age = -p.t; }
     } else if (p.s === 'ready') {
       p.age += dt;
       if (d.tut && p.age > .8) { p.s = 'cook'; p.t = APPROACH + .5; p.age = 0; }
       else if (p.age >= BURN_AGE) { p.s = 'burnt'; p.t = 1.6; p.cuts = 0; g.rep = Math.max(-1.5, g.rep - .08); d.combo = 0; d.ev.push({ k: 'grade', g: 'burnt', combo: 0 }); }
-    } else if (p.s === 'burnt') { p.t -= dt; if (p.t <= 0) { p.s = 'cook'; p.t = cookTime(g); } }
+    } else if (p.s === 'burnt') { p.t -= dt; if (p.t <= 0) recook(g, p); }
   });
 
   if (!d.tut) d.rs -= dt;
@@ -286,7 +293,7 @@ function endRaid(d, r) { d.raid = null; d.rt = 8 + r() * 5; d.boss = { s: 'away'
 // 끌어서 뺏기: 노려볼 때 들고 있으면 들킨다
 function grab(g, c) {
   const d = g.d;
-  if (!has(g, 'steal') || d.cd.steal > 0 || d.over || c.shop !== 1 || c.st !== 'queue') return false;
+  if (d.cd.steal > 0 || d.over || c.shop !== 1 || c.st !== 'queue') return false;
   if (d.boss.s === 'watch') { busted(g, c); return false; }
   c.st = 'held'; return true;
 }
@@ -346,8 +353,9 @@ function chop(g, i) {
 // 누르는 순간 등급이 정해지고, 떼거나 잠시 뒤에 국밥이 나간다. 그 사이 문지르면 고기를 썬다
 function press(g, i) {
   const d = g.d, p = d.pots[i]; if (!p || p.lock || d.over || !queue(d, 0).length) return null;
+  if (d.clean <= 0) { d.ev.push({ k: 'say', shop: 0, text: '깨끗한 그릇이 없어요! 설거지!' }); return null; }
   const off = p.s === 'cook' ? -p.t : p.s === 'ready' ? p.age : null;
-  if (off === null || off < -APPROACH) return null;
+  if (off === null || off < -p.app) return null;
   const far = Math.abs(off);
   p.lock = far <= PERFECT ? 'perfect' : far <= GOOD ? 'good' : off < 0 ? 'raw' : 'late'; p.lockT = LOCK;
   // 딱 맞춘 만큼 오늘 국밥이 맛있어지고, 망치면 맛이 뚝 떨어진다
@@ -376,12 +384,13 @@ function serve(g, i) {
     }
     const rate = base && base + p.cuts * CUT_TIP + (thin ? -BAD_PAY : d.gold > 0 ? GOLD_PAY : 0), pay = Math.round(g.price * rate / 100) * 100;
     if (d.gold > 0) d.gold--;
-    if (has(g, 'broth')) d.broth = Math.max(0, d.broth - BROTH_BOWL);
+    d.clean--; d.dirty++;
+    d.broth = Math.max(0, d.broth - BROTH_BOWL);
     d.sales[0] += pay; d.served[0]++; d.spent += bowlCost(g);
     head.st = 'leave';
     d.ev.push({ k: 'serve', at: head, good: grade === 'perfect' || grade === 'good', best: grade === 'perfect', pay, cuts: p.cuts });
   }
-  p.s = 'cook'; p.t = cookTime(g); p.age = 0; p.cuts = 0;
+  recook(g, p);
   return grade;
 }
 function tapPot(g, i) { const r = press(g, i); if (r) serve(g, i); return r; }
@@ -397,9 +406,14 @@ function pourEnd(g) {
   return true;
 }
 
+function wash(g) {
+  const d = g.d; if (d.dirty <= 0 || d.over) return false;
+  d.dirty--; d.clean++; return true;
+}
+
 function useAct(g, a) {
   const d = g.d; if (d.cd[a] > 0 || d.over) return false;
-  if (a === 'call') { d.buff[0] = 5; d.cd.call = 15; d.ev.push({ k: 'say', shop: 0, text: '뜨끈한 국밥 있어요~' }); }
+  if (a === 'call') { d.buff[0] = 5; d.cd.call = 15; d.ev.push({ k: 'say', shop: 0, text: '전단지 받아 가세요!' }); }
   if (a === 'rice') {
     if (g.money + d.sales[0] - d.spent < 2000) return false;
     d.spent += 2000; d.cd.rice = 18; g.rep = Math.min(1.5, g.rep + .1);
@@ -655,20 +669,23 @@ function morning() {
     ${upgrade('uFire', `속도: 화력 ${g.fire + 1}단계`, g.fire, COST.fire[g.fire], `끓이는 시간 ${FIRE[g.fire]}초`, `옆집 ${ch.rs}초에 한 그릇`)}
     ${upgrade('uPots', `솥 ${g.pots}개`, g.pots, COST.pots[g.pots - 2], '솥이 많으면 빠르지만 손이 바빠져요', '')}
     ${g.bigStock ? `<div class="row"><header><b>사골 육수 준비 완료</b></header><div class="note">오늘 처음부터 황금 육수 ${g.bigStock * 5}그릇</div></div>` : `<button class="ghost" id="stockBtn">${stockLabel()}</button>`}
+    <div class="row"><header><b>오늘의 홍보</b></header><div class="chips promo">${PROMOS.map((v, i) => `<button class="chip${g.promo === i ? ' on' : ''}" data-p="${i}">${v.name}<small>${won(v.cost)} · ${v.note}</small></button>`).join('')}</div></div>
     <button class="main" id="go">문 열기</button>`, () => {
+    document.querySelectorAll('[data-p]').forEach(b => { b.onclick = () => { const i = +b.dataset.p; g.promo = g.promo === i ? undefined : i; beep(520); morning(); }; });
     if ($('stockBtn')) on('stockBtn', () => stockView(morning));
     $('price').oninput = e => { g.price = +e.target.value; $('pv').textContent = won(g.price); };
     const b = (id, w) => { if (!$(id).disabled) on(id, () => { buy(g, w); morning(); }); };
     b('uTaste', 'taste'); b('uFire', 'fire'); b('uPots', 'pots');
     on('go', () => {
-      const fresh = newToday();
-      if (!fresh) return openShop();
-      show(`<h2>${WHY[fresh][0]}</h2><h1>${g.ch * 3 + g.day + 1}번째 날</h1><p>${WHY[fresh][1]}</p><button class="main" id="go2">해 볼게요</button>`, () => on('go2', openShop));
+      if (g.seen) return openShop();
+      show(`<h2>장사 시작 전 연습</h2><h1>사장님이 할 일</h1><p>국밥집 사장은 손이 열 개라도 모자라요.\n\n<b>솥</b> 원이 겹칠 때 눌러 국밥을 내요.\n<b>육수통</b> 줄면 맹물이 돼요. 꾹 눌러 채워요.\n<b>설거지</b> 그릇이 없으면 못 팔아요.\n<b>뚝배기</b> 손님 뺏으러 오는 왕사장을 막아요.\n<b>현수막</b> 옆집으로 쏠린 손님을 되찾아요.\n<b>끌어오기</b> 옆집 손님을 우리 집으로!</p><button class="main" id="go2">하나씩 해 볼게요</button>`, () => on('go2', openShop));
     });
   });
 }
 function openShop() {
+  if (PROMOS[g.promo]) g.money -= PROMOS[g.promo].cost;
   startDay(g); bubbles = [];
+  g.promo = undefined;
   const box = $('pots'); box.innerHTML = '';
   g.d.pots.forEach((p, i) => {
     const b = document.createElement('button'); b.className = 'pot'; b.setAttribute('aria-label', '솥 ' + (i + 1));
@@ -693,9 +710,6 @@ function openShop() {
   box.style.gridTemplateColumns = `repeat(${g.pots > 3 ? 2 : g.pots}, 1fr)`;
   $('myName').textContent = LOOK[g.ch].me; $('rvName').textContent = LOOK[g.ch].rv;
   sheet.hidden = true; last = performance.now();
-  $('app').classList.toggle('noBroth', !has(g, 'broth'));
-  $('aBowl').hidden = !has(g, 'raid'); $('aCall').hidden = $('aRice').hidden = !has(g, 'banner');
-  $('acts').hidden = !has(g, 'raid');
   if (g.bigStock) {
     g.d.big = g.bigStock; g.bigStock = 0; g.d.fan = g.fan; g.fan = null; g.d.gold = g.d.big * 5; g.d.flavor = Math.min(FLAVOR_MAX, g.d.big * .4);
     bubbles.push({ x: .25, y: .45, text: '정성 육수 개시!', t: 2.6, col: '#fff27a' });
@@ -731,26 +745,22 @@ function ending(a, b) {
 
 /* 첫날 튜토리얼: 시간을 세워 두고 손가락으로 하나씩 따라 하게 한다 */
 const TUT = {
+  wash: { text: '그릇이 떨어지면 못 팔아요! 설거지를 연타하세요', start(d) { d.clean = 0; d.dirty = 3; }, done: d => d.clean >= 2,
+    finger(d) { const r = rel($('aWash')); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
   pot: { text: '줄어드는 빨간 원이 솥에 겹칠 때 딱 누르세요!', start(d) { d.tutShop = 0; d.pots[0].s = 'cook'; d.pots[0].t = APPROACH + .5; d.pots[1].t = 99; }, done: d => d.perfect > 0 || d.served[0] > 1,
     finger(d) { const r = rel($('pots').children[0]); return [r.x + r.w * .88, r.y + r.h * .88, r.x + r.w * .88, r.y + r.h * .88]; } },
-  broth: { text: '육수통을 꾹 누르고 있다가 흰 선에서 딱 떼세요!', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
+  broth: { text: '육수가 없으면 맹물 국밥! 꾹 누르다 흰 선에서 떼세요', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
     finger(d) { const r = rel($('pour')); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
   steal: { text: '옆집 손님을 끌어서 우리 집에 놓으세요', start(d) { d.tutShop = 1; }, done: d => d.stolen > 0,
     finger(d) { const c = queue(d, 1)[0], r = rel($('cv')); return c ? [r.x + c.px * r.w, r.y + c.py * r.h, r.x + r.w * .25, r.y + r.h * .62] : null; } },
-  banner: { text: '현수막이 걸렸어요! 연타해서 찢으세요', start(d) { d.banner = { a: BANNERS[1][0], b: BANNERS[1][1], t: 99, hp: 4 }; }, done: d => !d.banner,
+  banner: { text: '현수막 때문에 손님이 옆집으로 가요! 연타해서 찢으세요', start(d) { d.banner = { a: BANNERS[1][0], b: BANNERS[1][1], t: 99, hp: 4 }; }, done: d => !d.banner,
     finger(d) { const r = rel($('cv')); return [r.x + r.w * .75, r.y + r.h * .35, r.x + r.w * .75, r.y + r.h * .35]; } },
-  raid: { text: '조준이 초록색일 때 뚝배기 던지기를 누르세요!', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
+  raid: { text: '왕사장이 손님을 뺏으러 와요! 조준이 초록일 때 뚝배기 던지기', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
     finger(d) { if (d.bowls <= 0) d.bowls = 3; const b = rel($('aBowl')), r = rel($('cv')); return [b.x + b.w / 2, b.y + b.h / 2, b.x + b.w / 2, b.y + b.h / 2]; } },
 };
 let tut = null;
-const WHY = {
-  pot: ['오늘 배울 것: 솥', '국밥은 끓는 순간에 내야 제일 맛있어요.\n\n빨간 원이 솥에 겹칠 때 누르면 딱!\n딱! 맞출수록 국밥이 맛있어지고 비싸게 팔려요.\n\n오늘은 이것만 하면 돼요.'],
-  broth: ['오늘 배울 것: 육수통', '국밥을 팔수록 육수가 줄어요.\n바닥나면 맹물 국밥이 나가서 손님이 화내요.\n\n육수통을 꾹 눌러 채우세요.\n흰 선에서 떼면 더 맛있는 황금 육수가 돼요.'],
-  raid: ['오늘 배울 것: 왕사장 막기', '왕사장이 우리 손님을 뺏으러 건너와요!\n그냥 두면 손님을 데려가요.\n\n노란 조준이 초록색으로 변할 때 뚝배기를 던져 맞히면, 왕사장이 자빠지고 손님을 지켜요.'],
-  banner: ['오늘 배울 것: 현수막 찢기', '옆집이 현수막을 걸면 손님이 옆집으로 몰려요.\n현수막을 연타해서 찢으면 손님이 돌아와요.\n\n호객과 공깃밥 서비스 버튼도 오늘부터 쓸 수 있어요.'],
-  steal: ['오늘 배울 것: 손님 끌어오기', '이제 우리가 반격할 차례예요.\n옆집 줄의 손님을 손가락으로 끌어 우리 가게에 놓으세요.\n\n왕사장이 "!"를 띄우고 노려볼 때 들키면 벌금이에요.'],
-};
-const newToday = () => Object.keys(LEARN).find(k => LEARN[k] === stage(g) && !(g.seen && g.seen[k]));
+const TUT_ORDER = ['pot', 'broth', 'wash', 'raid', 'banner', 'steal'];
+const newToday = () => g.seen?.all ? undefined : TUT_ORDER.find(k => !(g.seen && g.seen[k]));
 function rel(el) { const a = $('app').getBoundingClientRect(), b = el.getBoundingClientRect(); return { x: b.left - a.left, y: b.top - a.top, w: b.width, h: b.height }; }
 function tutStart(key) {
   tut = key; g.d.tut = true; TUT[key].start(g.d);
@@ -758,8 +768,9 @@ function tutStart(key) {
 }
 function tutEnd() {
   const d = g.d; g.seen = g.seen || {}; g.seen[tut] = true; tut = null;
-  d.pots.forEach(p => { p.s = 'cook'; p.t = cookTime(g); p.lock = null; p.cuts = 0; });
-  Object.assign(d, { flavor: Math.min(FLAVOR_MAX, (d.big || 0) * .4), complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: (d.big || 0) * 5, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
+  const more = newToday(); if (more) { d.tutShop = undefined; d.banner = null; d.raid = null; d.tutStock = false; sfx.win(); return tutStart(more); }
+  d.pots.forEach(p => { recook(g, p); p.lock = null; });
+  Object.assign(d, { flavor: Math.min(FLAVOR_MAX, (d.big || 0) * .4), complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: (d.big || 0) * 5, combo: 0, best: 0, banner: null, clean: 8, dirty: 0, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
   $('hint').hidden = true; $('finger').hidden = true;
   bubbles.push({ x: .5, y: .5, text: '좋아요! 이제 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
 }
@@ -1009,20 +1020,21 @@ function hud() {
   $('clock').textContent = `${g.day + 1}일째\n`; $('clock').innerHTML = `${g.day + 1}/${DAYS}일째<br>${Math.max(0, Math.ceil(DAY_LEN - d.t))}초`;
   const all = d.sales[0] + d.sales[1]; $('tugIn').style.width = (all ? d.sales[0] / all * 100 : 50) + '%';
   d.pots.forEach((p, i) => {
-    const b = $('pots').children[i], ring = b.lastChild, s = p.s, coming = s === 'cook' && p.t <= APPROACH, hold = coming && p.t >= APPROACH - .02 && !queue(d, 0).length;
+    const b = $('pots').children[i], ring = b.lastChild, s = p.s, coming = s === 'cook' && p.t <= p.app, hold = coming && (!queue(d, 0).length || p.delay > 0);
     b.className = 'pot' + (p.lock ? ' go' : hold ? '' : coming ? ' go' : s === 'ready' ? ' late' : s === 'burnt' ? ' burnt' : '');
-    b.style.setProperty('--p', s === 'cook' ? (1 - p.t / cookTime(g)) * 100 : 100);
+    b.style.setProperty('--p', s === 'cook' ? Math.min(100, (1 - p.t / cookTime(g)) * 100) : 100);
     ring.style.opacity = coming && !hold && !p.lock ? 1 : 0;
-    ring.style.transform = `scale(${1 + Math.max(0, p.t) / APPROACH * 1.1})`;
+    ring.style.transform = `scale(${1 + Math.max(0, p.t) / p.app * 1.1})`;
     ring.style.borderColor = coming && p.t <= GOOD ? 'var(--good)' : 'var(--rival)';
     b.firstChild.textContent = p.lock ? (p.cuts ? `썰기 ${p.cuts}/${MAX_CUTS}` : '슥슥!') : s === 'burnt' ? '넘침' : hold ? '손님 대기' : coming ? '맞춰요' : s === 'ready' ? '늦었다!' : '끓는 중';
   });
-  const near = d.pots.some(p => p.s === 'cook' && p.t <= APPROACH && queue(d, 0).length), cue = $('cue');
+  const near = d.pots.some(p => p.s === 'cook' && p.t <= p.app && queue(d, 0).length), cue = $('cue');
   const bad = soup(d);
-  cue.className = near || d.combo > 1 || d.gold || bad !== 'ok' ? 'go' : '';
-  cue.textContent = d.raid ? '왕사장이 손님을 뺏으러 와요! 막으세요' : bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : has(g, 'broth') ? '육수통은 흰 선에서 손을 떼세요' : '손님이 오면 원이 줄어들어요';
+  cue.className = d.clean <= 2 || near || d.combo > 1 || d.gold || bad !== 'ok' ? 'go' : '';
+  cue.textContent = d.clean <= 2 ? '그릇이 없어요! 설거지를 연타하세요' : d.raid ? '왕사장이 손님을 뺏으러 와요! 막으세요' : bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : '육수통은 흰 선에서 손을 떼세요';
   $('aCall').disabled = d.cd.call > 0;
   $('aRice').disabled = d.cd.rice > 0;
+  $('washN').textContent = d.dirty; $('washNote').textContent = `깨끗한 그릇 ${d.clean}`;
   const level = Math.min(100, d.broth) / 100, inner = $('pour').clientHeight - 3;
   $('brothIn').style.height = level * inner + 'px';
   $('brothGold').style.bottom = 3 + d.target / 100 * inner - 2 + 'px';
@@ -1048,7 +1060,8 @@ const pourBtn = $('pour');
 pourBtn.addEventListener('pointerdown', e => { e.preventDefault(); ac(); pourBtn.setPointerCapture(e.pointerId); if (g && g.d) g.d.pouring = true; pourBtn.classList.add('on'); });
 const pourStop = () => { if (g && g.d) pourEnd(g); pourBtn.classList.remove('on'); };
 pourBtn.addEventListener('pointerup', pourStop); pourBtn.addEventListener('pointercancel', pourStop);
-$('tutSkip').onclick = tutEnd;
+$('aWash').addEventListener('pointerdown', e => { e.preventDefault(); if (g && g.d && wash(g)) noise(.05, 1800, 3000, .08); });
+$('tutSkip').onclick = () => { g.seen = { all: true }; tut = 'pot'; tutEnd(); };
 $('mute').onclick = () => setMute(!muted);
 $('mute').textContent = muted ? '소리 끔' : '소리 켬';
 addEventListener('resize', fit);
