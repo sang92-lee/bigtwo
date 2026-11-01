@@ -11,10 +11,10 @@ AUTH="Authorization: basic $(printf 'x-access-token:%s' "$(cat ~/.github_token)"
 git -C $REPO -c http.extraHeader="$AUTH" pull -q
 
 # 게임 파일 (public → Cloudflare 정적 파일)
-# 같은 사이트의 /cyclops 게임은 빅투 배포 때 지우지 않고 그대로 둔다
-KEEP=$(mktemp -d); [ -d $REPO/public/cyclops ] && mv $REPO/public/cyclops $KEEP/
+# 같은 사이트의 /cyclops, /gukbap 게임은 빅투 배포 때 지우지 않고 그대로 둔다
+KEEP=$(mktemp -d); for g in cyclops gukbap moneygame; do [ -d $REPO/public/$g ] && mv $REPO/public/$g $KEEP/; done
 rm -rf $REPO/public && cp -R Builds/WebGL $REPO/public
-[ -d $KEEP/cyclops ] && mv $KEEP/cyclops $REPO/public/
+for g in cyclops gukbap moneygame; do [ -d $KEEP/$g ] && mv $KEEP/$g $REPO/public/; done
 sed -i '' -e 's|<title>.*</title>|<title>빅 투</title>|' \
   -e 's|style.width = "960px"|style.width = "min(96vw, 1280px)"|' \
   -e 's|style.height = "600px"|style.height = "min(86vh, 800px)"|' $REPO/public/index.html

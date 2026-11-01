@@ -1,0 +1,531 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#15342f"></head><body>
+<title>국밥 전쟁</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<style>
+/* 옛날 식당 민트 타일 벽 + 노란 간판 + 스테인리스. 한 화면을 위아래 셋으로 나눈 가게 앞 풍경 */
+:root {
+  --tile: #a9dccb; --tile-deep: #2f7f73; --sign: #ffd21f; --sign-ink: #c3200f; --steel: #dfe6e6;
+  --ink: #15342f; --paper: #f7fbf6; --rival: #d8321e; --good: #1d8a4e; --pot: #4a2c21;
+  --display: "Black Han Sans", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --body: "Gowun Dodum", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; margin: 0; background: var(--tile-deep); color: var(--ink); overflow: hidden;
+  overscroll-behavior: none; -webkit-user-select: none; user-select: none; font-family: var(--body); touch-action: manipulation }
+button { font-family: inherit; color: inherit; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
+#app { position: relative; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: var(--tile); overflow: hidden }
+#top { display: grid; gap: 6px; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); background: var(--ink); color: var(--paper) }
+#score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums }
+#score b { font: 400 21px var(--display) } #score .r { text-align: right }
+#score small { display: block; font-size: 12px; opacity: .8 }
+#clock { text-align: center; font-size: 12px; line-height: 1.3 }
+#tug { height: 8px; background: var(--rival); overflow: hidden } #tugIn { height: 100%; width: 50%; background: var(--sign); transition: width .3s }
+#street { flex: 1; min-height: 0; position: relative } canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none }
+#desk { background: var(--steel); border-top: 5px solid var(--ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px }
+#pots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px }
+.pot { aspect-ratio: 1; max-height: 92px; justify-self: center; width: 100%; max-width: 92px; border-radius: 50%; position: relative; padding: 7px; background: conic-gradient(var(--c, #8a6a58) calc(var(--p, 0) * 1%), #c9d2d1 0); touch-action: none }
+.pot i { position: absolute; inset: 7px; border-radius: 50%; background: var(--pot); color: var(--paper); display: grid; place-items: center; font: 400 15px/1.1 var(--display); text-align: center }
+.pot.go i { background: var(--sign); color: var(--sign-ink); animation: bob .35s infinite alternate } .pot.go { --c: var(--good) }
+.pot.late i { background: #e88a2d; color: var(--ink) } .pot.late { --c: var(--rival) }
+.pot.burnt i { background: #111; }
+.pot:active i { transform: scale(.93) }
+@keyframes bob { to { transform: scale(1.07) } }
+#acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px }
+.act { background: var(--ink); color: var(--paper); padding: 9px 2px; font: 400 16px var(--display); position: relative; overflow: hidden }
+.act small { display: block; font: 12px var(--body); opacity: .8 } .act[disabled] { opacity: .45 }
+#sheet { position: absolute; inset: 0; background: var(--tile-deep); color: var(--paper); display: flex; flex-direction: column; gap: 12px; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 18px max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; z-index: 5 }
+#sheet[hidden] { display: none }
+#sheet h1 { margin: 0; font: 400 clamp(30px, 10vw, 44px)/1.15 var(--display); color: var(--sign); text-wrap: balance }
+#sheet h2 { margin: 0; font-size: 14px; font-weight: 400; opacity: .85 }
+#sheet p { margin: 0; font-size: 17px; line-height: 1.6; white-space: pre-line }
+.row { background: var(--paper); color: var(--ink); padding: 10px 12px; display: grid; gap: 6px }
+.row header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums }
+.row header b { font: 400 19px var(--display) } .row header span { font-size: 13px; color: var(--rival) }
+.row .note { font-size: 13px; opacity: .8 }
+.row input { width: 100%; accent-color: var(--sign-ink); height: 28px }
+.buy { background: var(--sign); color: var(--sign-ink); padding: 9px; font: 400 16px var(--display) } .buy[disabled] { background: #d6dcdb; color: #6d7a78 }
+.main { background: var(--sign); color: var(--sign-ink); padding: 14px; font: 400 21px var(--display); margin-top: auto; flex: none }
+.ghost { background: transparent; color: var(--paper); padding: 8px; font-size: 14px; text-decoration: underline; flex: none }
+table { width: 100%; border-collapse: collapse; background: var(--paper); color: var(--ink); font-variant-numeric: tabular-nums }
+td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400 } td:first-child, th:first-child { text-align: left } tr + tr td { border-top: 1px solid var(--steel) }
+@media (prefers-reduced-motion: reduce) { .pot.go i { animation: none } }
+</style>
+<div id="app">
+  <div id="top">
+    <div id="score">
+      <div><small id="myName">우리집</small><b id="mySales">0원</b></div>
+      <div id="clock"></div>
+      <div class="r"><small id="rvName">옆집</small><b id="rvSales">0원</b></div>
+    </div>
+    <div id="tug"><div id="tugIn"></div></div>
+  </div>
+  <div id="street"><canvas id="cv"></canvas></div>
+  <div id="desk">
+    <div id="pots"></div>
+    <div id="acts">
+      <button class="act" id="aCall">호객<small>잠깐 손님을 끌어요</small></button>
+      <button class="act" id="aRice">공깃밥 서비스<small>2,000원 줄 달래기</small></button>
+    </div>
+  </div>
+  <div id="sheet" hidden></div>
+</div>
+<script id="logic">
+/* 게임 규칙: 화면과 분리해 두어 자동 시험으로 끝까지 돌려 볼 수 있다 */
+const TYPES = [
+  { n: '학생', tag: '싸게', c: '#3a78d8', p: 1.7, t: .5, s: .6 },
+  { n: '직장인', tag: '빨리', c: '#444c5c', p: .6, t: .5, s: 1.8 },
+  { n: '어르신', tag: '맛', c: '#a0542c', p: .7, t: 1.5, s: .4 },
+  { n: '미식가', tag: '맛!!', c: '#8b2fb0', p: .15, t: 2.6, s: .3 },
+];
+const CHAPTERS = [
+  { place: '골목 포장마차', mix: [4, 3, 3, 0], gap: 1.5, rent: 20000, rt: 3.6, rs: 3.6, rp: 8000, banner: 19,
+    intro: '할머니가 물려주신 솥 두 개로 포장마차를 열었어요.\n\n그런데 개업 첫날, 바로 옆에 커다란 간판이 올라갑니다.\n\n"반갑소. 옆집 왕대박국밥 왕사장이오.\n이 골목 국밥은 내가 접수하지."' },
+  { place: '시장 안 가게', mix: [3, 3, 4, 0], gap: 1.35, rent: 50000, rt: 4.8, rs: 2.8, rp: 8000, banner: 17,
+    intro: '골목을 이기고 시장에 번듯한 가게를 얻었어요.\n\n짐을 푸는데 옆 가게 셔터가 올라갑니다.\n\n"또 만났네? 네가 가는 곳 옆엔 언제나 내가 있다."\n\n왕사장이 따라왔어요.' },
+  { place: '대학가', mix: [7, 1, 1, 1], gap: 1.2, rent: 80000, rt: 5.4, rs: 2.2, rp: 6500, banner: 15,
+    intro: '대학가로 옮겼어요. 손님은 온통 학생입니다.\n\n옆집에 왕사장의 현수막이 걸렸어요.\n\n"국밥 6,500원. 학생은 돈이 없다."\n\n이곳의 승부는 가격이에요.' },
+  { place: '오피스 거리', mix: [1, 7, 1, 1], gap: 1.05, rent: 110000, rt: 6.2, rs: 1.6, rp: 8500, banner: 14,
+    intro: '점심시간의 오피스 거리. 넥타이 부대는 10분 안에 먹고 나가야 해요.\n\n"3초 국밥 들어갑니다!"\n\n왕사장이 스톱워치를 들고 서 있어요.\n\n이곳의 승부는 속도예요.' },
+  { place: '미식 거리', mix: [0, 1, 3, 6], gap: 1.05, rent: 150000, rt: 5, rs: 1.5, rp: 11000, banner: 12,
+    intro: '드디어 전국 1등을 가리는 미식 거리.\n\n왕사장이 처음으로 웃지 않습니다.\n\n"국물 한번 먹어 봤다. 그 맛, 어디서 배웠지?"\n\n마지막 승부는 맛이에요.' },
+];
+const FIRE = [4.4, 3.5, 2.8, 2.2, 1.7];   // 화력 단계별 끓이는 시간
+const BROTH = [8, 16, 24, 48, 72];        // 맛 단계별 육수 우린 시간
+const COST = { taste: [80000, 200000, 400000, 700000], fire: [70000, 180000, 360000, 640000], pots: [150000, 380000] };
+const DAY_LEN = 50, GOOD_AGE = 2.2, BURN_AGE = 7, DAYS = 3;
+const BANNERS = [
+  ['3초 국밥! 앉기도 전에 나옴', '3초면 컵라면도 안 익음'], ['원조 중의 원조', '원조의 원조의 할머니'],
+  ['사장이 잘생김', '사장이 더 잘생김'], ['오늘 고기 두 배', '어제 고기도 두 배'], ['깍두기 무한 리필', '깍두기가 맛있어야 무한이지'],
+];
+const TAUNTS = ['손님 없어 보이네?', '그 국물 맹물 아니야?', '우리 집 줄 보이지?', '문 닫을 때 말해~', '솥 하나 더 빌려줄까?'];
+
+function newGame() { return { ch: 0, day: 0, money: 30000, taste: 0, fire: 0, pots: 2, price: 8000, rep: 0, rp: CHAPTERS[0].rp, weekMe: 0, weekRv: 0, snap: null }; }
+const cookTime = g => FIRE[g.fire];
+const bowlCost = g => 2200 + g.taste * 500;
+function snapshot(g) { g.snap = { money: g.money, taste: g.taste, fire: g.fire, pots: g.pots, price: g.price }; }
+function restore(g) { g.money = Math.max(g.money, 0) + 30000; g.day = 0; g.weekMe = g.weekRv = 0; g.rep = 0; g.rp = CHAPTERS[g.ch].rp; }
+
+const r0 = () => Math.random();
+function startDay(g) {
+  const ch = CHAPTERS[g.ch];
+  const pots = []; for (let i = 0; i < g.pots; i++) pots.push({ s: 'cook', t: cookTime(g) * (.6 + i * .25), age: 0 });
+  g.d = { t: 0, next: .3, people: [], pots, sales: [0, 0], served: [0, 0], lost: 0, spent: 0, tips: 0, buff: [0, 0], banner: null, bt: ch.banner * .6,
+    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4 };
+}
+const queue = (d, shop) => d.people.filter(c => c.shop === shop && c.st === 'queue');
+const coming = (d, shop) => d.people.filter(c => c.shop === shop && (c.st === 'queue' || c.st === 'walk')).length;
+
+function choose(g, c, r) {
+  const d = g.d, ch = CHAPTERS[g.ch], w = TYPES[c.type];
+  const mineServe = (cookTime(g) + .8) / g.pots;
+  const val = (taste, price, wait) => w.t * taste + w.p * (9000 - price) / 1000 - w.s * wait / 4;
+  const me = val(g.taste + 1.2 + g.rep, g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
+  const rv = val(ch.rt, g.rp, coming(d, 1) * d.rs) + (d.buff[1] > 0 ? 2.2 : 0);
+  return me + (r() - .5) * 3 >= rv ? 0 : 1;
+}
+
+function stepDay(g, dt, r = Math.random) {
+  const d = g.d, ch = CHAPTERS[g.ch]; if (d.over) return;
+  d.t += dt; d.next -= dt;
+  for (const k in d.cd) d.cd[k] = Math.max(0, d.cd[k] - dt);
+  d.buff[0] = Math.max(0, d.buff[0] - dt); d.buff[1] = Math.max(0, d.buff[1] - dt);
+  if (d.banner) { d.banner.t -= dt; if (d.banner.t <= 0) d.banner = null; }
+
+  if (d.next <= 0 && d.t < DAY_LEN) {
+    d.next = ch.gap * (.65 + r() * .7);
+    let roll = r() * ch.mix.reduce((a, b) => a + b), type = 0;
+    while (roll >= ch.mix[type]) roll -= ch.mix[type++];
+    const c = { type, x: .5, y: 1.02, st: 'walk', shop: 0, wait: 13 + r() * 6, moved: false, id: Math.random() };
+    c.shop = choose(g, c, r); d.people.push(c);
+  }
+  d.bt -= dt;
+  if (d.bt <= 0) {
+    d.bt = ch.banner * (.8 + r() * .4);
+    const i = Math.floor(r() * BANNERS.length);
+    d.banner = { i, t: 7, hp: 6 }; d.buff[1] = 7; d.ev.push({ k: 'banner', text: BANNERS[i][0] });
+  }
+  // 왕사장은 등을 돌렸다가 예고 뒤 노려보고, 건너오는 동안에는 문을 비운다
+  const b = d.boss; b.t -= dt;
+  if (d.raid) b.s = 'away';
+  else if (b.t <= 0) {
+    if (b.s === 'away') { b.s = 'warn'; b.t = 1; d.ev.push({ k: 'warn' }); }
+    else if (b.s === 'warn') { b.s = 'watch'; b.t = 2.6; }
+    else { b.s = 'away'; b.t = 4 + r() * 3.5; }
+  }
+  if (b.s === 'watch') for (const c of d.people) if (c.st === 'held') busted(g, c);
+  if (!d.raid) { d.rt -= dt; if (d.rt <= 0) startRaid(d); }
+  else {
+    d.raid.x -= .46 / 3.2 * dt;
+    if (d.raid.x <= .3) {
+      const head = queue(d, 0)[0];
+      if (head) { head.shop = 1; head.st = 'walk'; head.moved = true; head.wait = 10; g.rep = Math.max(-1, g.rep - .05); d.lost++; d.ev.push({ k: 'say', shop: 0, text: '왕사장이 손님을 데려갔어요!' }); }
+      endRaid(d, r);
+    }
+  }
+  d.taunt -= dt;
+  if (d.taunt <= 0) { d.taunt = 8 + r() * 6; d.ev.push({ k: 'say', shop: 1, text: TAUNTS[Math.floor(r() * TAUNTS.length)] }); }
+
+  for (const c of d.people) {
+    if (c.st === 'queue') {
+      c.wait -= dt;
+      if (c.wait <= 0) {
+        if (!c.moved) {
+          c.moved = true; c.st = 'walk'; c.wait = 10; c.shop = 1 - c.shop;
+          if (c.shop === 1) { g.rep = Math.max(-1, g.rep - .06); d.lost++; d.ev.push({ k: 'say', at: c, text: '옆집 갈래!' }); }
+        } else { c.st = 'leave'; if (c.shop === 0) d.lost++; }
+      }
+    }
+    if (c.st === 'walk') {
+      const q = coming(d, c.shop), tx = c.shop ? .75 : .25, ty = .52;
+      const dx = tx - c.x, dy = ty - c.y, len = Math.hypot(dx, dy), step = .34 * dt;
+      if (len <= step) c.st = 'queue'; else { c.x += dx / len * step; c.y += dy / len * step; }
+    }
+    if (c.st === 'leave') { c.y += .34 * dt; c.x += (c.shop ? .1 : -.1) * dt; }
+  }
+  d.people = d.people.filter(c => c.y < 1.1);
+
+  for (const p of d.pots) {
+    if (p.s === 'cook') { p.t -= dt; if (p.t <= 0) { p.s = 'ready'; p.age = 0; d.ev.push({ k: 'ding' }); } }
+    else if (p.s === 'ready') {
+      if (queue(d, 0).length) p.age += dt;
+      if (p.age >= BURN_AGE) { p.s = 'burnt'; p.t = 1.6; g.rep = Math.max(-1, g.rep - .08); d.ev.push({ k: 'say', shop: 0, text: '앗, 넘쳤다!' }); }
+    } else if (p.s === 'burnt') { p.t -= dt; if (p.t <= 0) { p.s = 'cook'; p.t = cookTime(g); } }
+  }
+
+  d.rs -= dt;
+  if (d.rs <= 0) {
+    d.rs = ch.rs * (.85 + r() * .3);
+    const head = queue(d, 1)[0];
+    if (head) { head.st = 'leave'; d.sales[1] += g.rp; d.served[1]++; }
+  }
+  if (d.t >= DAY_LEN) d.over = true;
+}
+
+function startRaid(d) { d.raid = { x: .76 }; d.ev.push({ k: 'say', shop: 1, text: '거기 손님 좀 빌립시다~' }); }
+function endRaid(d, r) { d.raid = null; d.rt = 12 + r() * 6; d.boss = { s: 'away', t: 3 }; }
+
+// 끌어서 뺏기: 노려볼 때 들고 있으면 들킨다
+function grab(g, c) {
+  const d = g.d;
+  if (d.cd.steal > 0 || d.over || c.shop !== 1 || c.st !== 'queue') return false;
+  if (d.boss.s === 'watch') { busted(g, c); return false; }
+  c.st = 'held'; return true;
+}
+function drop(g, c, x, y) {
+  if (c.st !== 'held') return false;
+  c.x = x; c.y = y; c.st = 'walk';
+  if (x < .5) { c.shop = 0; c.moved = true; c.wait = 14; g.d.stolen++; g.d.cd.steal = 2.5; return true; }
+  return false;
+}
+function busted(g, c) {
+  const d = g.d;
+  c.st = 'walk'; c.shop = 1; d.spent += 5000; d.cd.steal = 5; g.rep = Math.max(-1, g.rep - .1);
+  d.ev.push({ k: 'bust' }); d.ev.push({ k: 'say', shop: 1, text: '남의 손님을 훔쳐?! 벌금 5,000원!' });
+  if (!d.raid) startRaid(d);
+}
+// 연타로 현수막 찢기
+function tear(g) {
+  const d = g.d; if (!d.banner) return false;
+  d.banner.hp--;
+  if (d.banner.hp > 0) return true;
+  d.ev.push({ k: 'say', shop: 0, text: BANNERS[d.banner.i][1] });
+  d.banner = null; d.buff[1] = 0; d.buff[0] = 4;
+  return true;
+}
+// 탭으로 쫓아내기
+function shoo(g) {
+  const d = g.d; if (!d.raid) return false;
+  endRaid(d, Math.random); d.buff[0] = Math.max(d.buff[0], 3);
+  d.ev.push({ k: 'say', shop: 0, text: '썩 물러가요!' });
+  return true;
+}
+
+function tapPot(g, i) {
+  const d = g.d, p = d.pots[i]; if (!p || p.s !== 'ready' || d.over) return null;
+  const head = queue(d, 0)[0];
+  if (!head) { d.ev.push({ k: 'say', shop: 0, text: '손님이 없어요' }); return null; }
+  const good = p.age < GOOD_AGE, pay = g.price + (good ? Math.round(g.price * .1 / 100) * 100 : 0);
+  d.sales[0] += pay; d.served[0]++; d.spent += bowlCost(g);
+  if (good) { d.perfect++; g.rep = Math.min(1.5, g.rep + .025); } else g.rep = Math.max(-1, g.rep - .015);
+  head.st = 'leave';
+  d.ev.push({ k: 'serve', at: head, good, pay });
+  p.s = 'cook'; p.t = cookTime(g); p.age = 0;
+  return good;
+}
+
+function useAct(g, a) {
+  const d = g.d; if (d.cd[a] > 0 || d.over) return false;
+  if (a === 'call') { d.buff[0] = 5; d.cd.call = 15; d.ev.push({ k: 'say', shop: 0, text: '뜨끈한 국밥 있어요~' }); }
+  if (a === 'rice') {
+    if (g.money + d.sales[0] - d.spent < 2000) return false;
+    d.spent += 2000; d.cd.rice = 18; g.rep = Math.min(1.5, g.rep + .1);
+    for (const c of queue(d, 0)) c.wait += 9;
+    d.ev.push({ k: 'say', shop: 0, text: '공깃밥 서비스요!' });
+  }
+  return true;
+}
+
+function endDay(g) {
+  const d = g.d, ch = CHAPTERS[g.ch];
+  const profit = d.sales[0] - d.spent - ch.rent, res = { me: d.sales[0], rv: d.sales[1], servedMe: d.served[0], servedRv: d.served[1], spent: d.spent, rent: ch.rent, profit, perfect: d.perfect, lost: d.lost, stolen: d.stolen };
+  g.money += profit; g.weekMe += d.sales[0]; g.weekRv += d.sales[1]; g.rep *= .7; g.day++;
+  // 옆집도 가격을 따라 내린다
+  if (g.price < g.rp - 500) g.rp = Math.max(ch.rp - 2000, g.rp - 500);
+  g.d = null;
+  if (g.day >= DAYS) res.chapter = g.weekMe > g.weekRv ? 'win' : 'lose';
+  return res;
+}
+
+function nextChapter(g) { g.ch++; g.day = 0; g.weekMe = g.weekRv = 0; if (g.ch < CHAPTERS.length) g.rp = CHAPTERS[g.ch].rp; snapshot(g); }
+
+function buy(g, what) {
+  const c = what === 'pots' ? COST.pots[g.pots - 2] : COST[what][g[what]];
+  if (c === undefined || g.money < c) return false;
+  g.money -= c; g[what]++; return true;
+}
+</script>
+<script>
+const $ = id => document.getElementById(id), won = n => n.toLocaleString('ko-KR') + '원';
+const SAVE = 'gukbap-war-1';
+let g = null, last = 0, ctx, W = 0, H = 0, bubbles = [], steam = [], audio;
+const sheet = $('sheet');
+
+function beep(f, len = .08, type = 'square', vol = .05) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), v = audio.createGain();
+    o.type = type; o.frequency.value = f; v.gain.setValueAtTime(vol, audio.currentTime);
+    v.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + len);
+    o.connect(v).connect(audio.destination); o.start(); o.stop(audio.currentTime + len);
+  } catch (e) {}
+}
+function save() { try { const { d, ...keep } = g; localStorage.setItem(SAVE, JSON.stringify(keep)); } catch (e) {} }
+function load() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch (e) { return null; } }
+function clearSave() { try { localStorage.removeItem(SAVE); } catch (e) {} }
+
+function show(html, wire) { sheet.innerHTML = html; sheet.hidden = false; sheet.scrollTop = 0; wire && wire(); }
+const on = (id, f) => { $(id).onclick = () => { beep(520); f(); }; };
+
+function title() {
+  const old = load();
+  show(`<h2>옆집을 이겨라</h2><h1>국밥 전쟁</h1>
+    <p>손님은 셋 중 하나를 봐요.\n<b>가격, 속도, 맛.</b>\n\n국밥을 제때 내고, 옆집 손님을 끌어오고, 현수막을 찢어서 왕사장을 이기세요.</p>
+    <button class="main" id="go">${old ? '새로 시작' : '개업하기'}</button>${old ? '<button class="buy" id="cont">이어서 하기</button>' : ''}`, () => {
+    on('go', () => { clearSave(); g = newGame(); snapshot(g); howto(); });
+    if (old) on('cont', () => { g = old; morning(); });
+  });
+}
+function howto() {
+  show(`<h2>장사하며 싸우는 법</h2><h1>왕사장과 맞붙기</h1>
+    <div class="row"><header><b>솥 누르기</b></header><div class="note">노랗게 "지금!"이 뜨면 바로 눌러요. 제때 내면 팁이 붙어요.</div></div>
+    <div class="row"><header><b>손님 끌어오기</b></header><div class="note">옆집 줄의 손님을 손가락으로 끌어 왼쪽 우리집에 놓아요. 왕사장이 "!"를 띄우고 노려보면 벌금이에요.</div></div>
+    <div class="row"><header><b>현수막 연타</b></header><div class="note">옆집 현수막이 걸리면 눌러서 찢어요. 찢으면 손님이 우리 쪽으로 쏠려요.</div></div>
+    <div class="row"><header><b>왕사장 쫓아내기</b></header><div class="note">우리 쪽으로 건너오면 도착하기 전에 눌러요. 그동안 옆집 문은 비어 있어요.</div></div>
+    <button class="main" id="go">알겠어요</button>`, () => on('go', intro));
+}
+function intro() {
+  const ch = CHAPTERS[g.ch];
+  show(`<h2>${g.ch + 1}장</h2><h1>${ch.place}</h1><p>${ch.intro}</p><button class="main" id="go">장사 준비</button>`, () => on('go', morning));
+}
+function morning() {
+  save();
+  const ch = CHAPTERS[g.ch];
+  const upgrade = (id, name, lv, cost, note, cmp) => `<div class="row"><header><b>${name}</b><span>${cmp}</span></header><div class="note">${note}</div>
+    <button class="buy" id="${id}" ${cost === undefined || g.money < cost ? 'disabled' : ''}>${cost === undefined ? '최고 단계' : '올리기 ' + won(cost)}</button></div>`;
+  show(`<h2>${ch.place} · ${g.day + 1}일째 아침 · 이번 승부 ${g.weekMe.toLocaleString('ko-KR')} 대 ${g.weekRv.toLocaleString('ko-KR')}</h2>
+    <h1>${won(g.money)}</h1>
+    <div class="row"><header><b>가격 <span id="pv" style="color:inherit">${won(g.price)}</span></b><span>옆집 ${won(g.rp)}</span></header>
+      <input id="price" type="range" min="4000" max="14000" step="500" value="${g.price}" aria-label="국밥 가격">
+      <div class="note">한 그릇 재료비 ${won(bowlCost(g))}</div></div>
+    ${upgrade('uTaste', `맛: 육수 ${BROTH[g.taste]}시간`, g.taste, COST.taste[g.taste], '오래 우릴수록 맛이 좋고 재료비가 올라요', `옆집 맛 ${ch.rt}단계`)}
+    ${upgrade('uFire', `속도: 화력 ${g.fire + 1}단계`, g.fire, COST.fire[g.fire], `끓이는 시간 ${FIRE[g.fire]}초`, `옆집 ${ch.rs}초에 한 그릇`)}
+    ${upgrade('uPots', `솥 ${g.pots}개`, g.pots, COST.pots[g.pots - 2], '솥이 많으면 빠르지만 손이 바빠져요', '')}
+    <button class="main" id="go">문 열기</button>`, () => {
+    $('price').oninput = e => { g.price = +e.target.value; $('pv').textContent = won(g.price); };
+    const b = (id, w) => { if (!$(id).disabled) on(id, () => { buy(g, w); morning(); }); };
+    b('uTaste', 'taste'); b('uFire', 'fire'); b('uPots', 'pots');
+    on('go', openShop);
+  });
+}
+function openShop() {
+  startDay(g); bubbles = [];
+  const box = $('pots'); box.innerHTML = '';
+  g.d.pots.forEach((p, i) => {
+    const b = document.createElement('button'); b.className = 'pot'; b.innerHTML = '<i></i>'; b.setAttribute('aria-label', '솥 ' + (i + 1));
+    b.onpointerdown = e => { e.preventDefault(); const good = tapPot(g, i); if (good !== null) beep(good ? 880 : 440, .1); };
+    box.appendChild(b);
+  });
+  box.style.gridTemplateColumns = `repeat(${Math.max(g.pots, 3)}, 1fr)`;
+  $('myName').textContent = '우리집'; $('rvName').textContent = '왕대박국밥';
+  sheet.hidden = true; last = performance.now();
+}
+function dayOver() {
+  const res = endDay(g), d = res;
+  const line = d.me >= d.rv ? '오늘은 우리가 이겼어요!' : '"오늘 장사 잘되셨나? 하하하!"';
+  const table = `<table><tr><th></th><th>우리집</th><th>옆집</th></tr>
+    <tr><td>손님</td><td>${d.servedMe}명</td><td>${d.servedRv}명</td></tr><tr><td>매출</td><td>${won(d.me)}</td><td>${won(d.rv)}</td></tr></table>
+    <table><tr><td>재료비</td><td>-${won(d.spent)}</td></tr><tr><td>월세</td><td>-${won(d.rent)}</td></tr><tr><td>오늘 번 돈</td><td>${won(d.profit)}</td></tr><tr><td>딱 맞게 낸 국밥</td><td>${d.perfect}그릇</td></tr><tr><td>뺏어 온 손님</td><td>${d.stolen}명</td></tr><tr><td>놓친 손님</td><td>${d.lost}명</td></tr></table>`;
+  if (!d.chapter) return show(`<h2>${g.day}일째 저녁</h2><h1>${line}</h1>${table}<button class="main" id="go">다음 날</button>`, () => on('go', morning));
+  if (d.chapter === 'lose') return show(`<h2>${DAYS}일 합계 ${won(g.weekMe)} 대 ${won(g.weekRv)}</h2><h1>왕사장에게 졌어요</h1>${table}
+    <p>"역시 네 국물은 아직 멀었어."\n\n번 돈은 그대로 두고, 할머니 비상금 30,000원을 보태 이 장을 다시 시작해요.</p><button class="main" id="go">다시 도전</button>`, () => on('go', () => { restore(g); intro(); }));
+  const weekMe = g.weekMe, weekRv = g.weekRv;
+  nextChapter(g);
+  if (g.ch >= CHAPTERS.length) return ending(weekMe, weekRv);
+  show(`<h2>${DAYS}일 합계 ${won(weekMe)} 대 ${won(weekRv)}</h2><h1>${CHAPTERS[g.ch - 1].place} 접수!</h1>${table}<p>왕사장이 이삿짐을 싸는 소리가 들려요.</p><button class="main" id="go">다음 동네로</button>`, () => on('go', intro));
+}
+function ending(a, b) {
+  clearSave();
+  const pages = [
+    `<h2>${won(a)} 대 ${won(b)}</h2><h1>전국 1등!</h1><p>왕사장이 빈 뚝배기를 들고 찾아왔어요.\n\n"국물 끝맛에 생강 한 톨.\n이 맛을 아는 사람은 세상에 둘뿐이야."</p>`,
+    `<h2>마지막 이야기</h2><h1>같은 솥의 제자</h1><p>왕사장은 젊은 시절 할머니 포장마차에서 일하던 설거지 소년이었어요.\n\n"네가 어디로 가든 옆에 있었던 건, 할머니 국물이 잘 이어지는지 보고 싶어서였다."</p>`,
+    `<h2>그리고 다음 날 아침</h2><h1>내일도 옆집</h1><p>왕사장이 눈물을 닦고 간판을 올립니다.\n\n<b>"할머니 국밥 원조의 진짜 원조."</b>\n\n"...그래도 장사는 장사지?"\n\n오늘도 옆집과의 전쟁은 계속됩니다.</p>`];
+  const go = i => show(pages[i] + `<button class="main" id="go">${i < 2 ? '다음' : '처음으로'}</button>`, () => on('go', () => i < 2 ? go(i + 1) : title()));
+  go(0);
+}
+
+/* 거리 그리기 */
+function fit() {
+  const c = $('cv'), box = $('street').getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  W = box.width; H = box.height; c.width = W * dpr; c.height = H * dpr;
+  ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function text(s, x, y, size, col, font = 'Gowun Dodum', align = 'center') {
+  ctx.font = `${size}px "${font}", sans-serif`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(s, x, y);
+}
+function shop(x, w, name, sign, ink, cloth) {
+  const h = H * .46;
+  ctx.fillStyle = '#efe9d8'; ctx.fillRect(x, 0, w, h);
+  for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#fff' : cloth; ctx.fillRect(x + i * w / 6, h * .3, w / 6, h * .12); }
+  ctx.fillStyle = sign; ctx.fillRect(x, 0, w, h * .3);
+  text(name, x + w / 2, h * .2, Math.min(w * .15, h * .15), ink, 'Black Han Sans');
+  ctx.fillStyle = '#28403b'; ctx.fillRect(x + w * .1, h * .5, w * .32, h * .5);
+  ctx.fillStyle = '#ffe9a0'; ctx.fillRect(x + w * .52, h * .5, w * .38, h * .3);
+  ctx.fillStyle = '#4a2c21'; ctx.beginPath(); ctx.arc(x + w * .71, h * .8, w * .09, Math.PI, 0); ctx.fill();
+}
+function person(c) {
+  const t = TYPES[c.type], x = c.px * W, y = c.py * H, r = Math.min(W, H) * .028, swing = c.st === 'queue' ? 0 : Math.sin(performance.now() / 90 + c.id * 9) * 2;
+  ctx.fillStyle = t.c; ctx.fillRect(x - r * .8, y - r, r * 1.6, r * 1.9);
+  ctx.fillStyle = '#15342f'; ctx.fillRect(x - r * .6, y + r * .9, r * .5, r * .7 + swing); ctx.fillRect(x + r * .1, y + r * .9, r * .5, r * .7 - swing);
+  ctx.fillStyle = '#f2c9a0'; ctx.beginPath(); ctx.arc(x, y - r * 1.7, r * .85, 0, 7); ctx.fill();
+  if (c.st !== 'leave') {
+    ctx.font = `12px "Gowun Dodum", sans-serif`; const m = ctx.measureText(t.tag).width + 8;
+    ctx.fillStyle = '#fff'; ctx.fillRect(x - m / 2, y - r * 4.1, m, 16);
+    text(t.tag, x, y - r * 4.1 + 12, 12, t.c);
+    if (c.st === 'queue') { ctx.fillStyle = c.wait < 4 ? '#d8321e' : '#1d8a4e'; ctx.fillRect(x - r, y - r * 3, r * 2 * Math.min(1, c.wait / 16), 3); }
+  }
+}
+function bubble(b) {
+  ctx.font = `14px "Gowun Dodum", sans-serif`;
+  const m = ctx.measureText(b.text).width + 14, x = Math.max(m / 2 + 4, Math.min(W - m / 2 - 4, b.x * W)), y = b.y * H - (1.8 - b.t) * 10;
+  ctx.globalAlpha = Math.min(1, b.t * 3); ctx.fillStyle = b.col || '#fff'; ctx.fillRect(x - m / 2, y - 18, m, 24);
+  text(b.text, x, y, 14, '#15342f'); ctx.globalAlpha = 1;
+}
+function draw() {
+  if (!ctx) return; const d = g && g.d;
+  ctx.fillStyle = '#7f9c96'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#6d8a84'; for (let i = 0; i < 7; i++) ctx.fillRect(0, H * (.5 + i * .08), W, 1);
+  shop(4, W * .5 - 7, '우리집', '#ffd21f', '#c3200f', '#2f7f73');
+  shop(W * .5 + 3, W * .5 - 7, '왕대박국밥', '#d8321e', '#fff27a', '#15342f');
+  ctx.fillStyle = '#efe9d8'; if (Math.random() < .25) steam.push({ x: W * .25 + (Math.random() - .5) * 20, y: H * .36, t: 1 }, { x: W * .78 + (Math.random() - .5) * 20, y: H * .36, t: 1 });
+  steam = steam.filter(s => (s.t -= .02) > 0);
+  for (const s of steam) { s.y -= .6; ctx.globalAlpha = s.t * .45; ctx.beginPath(); ctx.arc(s.x, s.y, 5 + (1 - s.t) * 9, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  if (!d) return;
+  if (d.buff[0] > 0) text('손님 끌림!', W * .25, H * .495, 15, '#ffd21f', 'Black Han Sans');
+  if (d.banner) {
+    ctx.fillStyle = '#fff'; ctx.fillRect(W * .52, H * .3, W * .46, H * .085);
+    ctx.font = `13px "Black Han Sans", sans-serif`;
+    const s = BANNERS[d.banner.i][0]; text(s, W * .75, H * .35, Math.min(14, W * .46 / s.length * 1.35), '#d8321e', 'Black Han Sans');
+    ctx.fillStyle = '#d8321e'; ctx.fillRect(W * .52, H * .375, W * .46 * d.banner.hp / 6, 4);
+  }
+  drawBoss(d);
+  // 줄 선 사람은 입구에서 아래로 늘어선다
+  [0, 1].forEach(shopNo => queue(d, shopNo).forEach((c, i) => {
+    c.tx = (shopNo ? .75 : .25) + (i % 2 ? .05 : -.05) + (i > 7 ? (shopNo ? .12 : -.12) : 0); c.ty = .54 + (i > 7 ? i - 8 : i) * .055;
+  }));
+  for (const c of d.people) {
+    if (c.st === 'queue') { c.px += (c.tx - c.px) * .15; c.py += (c.ty - c.py) * .15; } else { c.px = c.x; c.py = c.y; }
+    if (c.px === undefined) { c.px = c.x; c.py = c.y; }
+  }
+  d.people.slice().sort((a, b) => a.py - b.py).forEach(person);
+  bubbles = bubbles.filter(b => (b.t -= 1 / 60) > 0); bubbles.forEach(bubble);
+}
+// 왕사장: 문 앞에서 등을 돌리거나 노려보고, 쳐들어올 때는 길을 건넌다
+function drawBoss(d) {
+  const raid = d.raid, x = (raid ? raid.x : .63) * W, y = (raid ? .5 : .47) * H, r = Math.min(W, H) * .036, b = d.boss;
+  ctx.fillStyle = '#fff'; ctx.fillRect(x - r, y - r, r * 2, r * 2.4);
+  ctx.fillStyle = '#d8321e'; ctx.fillRect(x - r, y + r * .2, r * 2, r * .35);
+  ctx.fillStyle = '#e8b98e'; ctx.beginPath(); ctx.arc(x, y - r * 1.8, r, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2b1a14'; ctx.beginPath(); ctx.arc(x, y - r * 2.1, r, Math.PI, 0); ctx.fill();
+  if (b.s === 'away' && !raid) { ctx.beginPath(); ctx.arc(x, y - r * 1.8, r, 0, 7); ctx.fill(); return; }
+  ctx.fillStyle = b.s === 'watch' ? '#d8321e' : '#15342f';
+  ctx.fillRect(x - r * .55, y - r * 1.9, r * .35, r * .3); ctx.fillRect(x + r * .2, y - r * 1.9, r * .35, r * .3);
+  if (b.s === 'warn') text('!', x, y - r * 3.2, 26, '#ffd21f', 'Black Han Sans');
+  if (b.s === 'watch') text('노려봄', x, y - r * 3.2, 15, '#ffd21f', 'Black Han Sans');
+  if (raid) text('눌러서 쫓기', x, y - r * 3.2, 14, '#fff27a', 'Black Han Sans');
+}
+const bannerBox = () => [.52, .3, .46, .085];
+let heldC = null;
+function pointAt(e) { const r = $('cv').getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; }
+$('cv').addEventListener('pointerdown', e => {
+  const d = g && g.d; if (!d) return;
+  e.preventDefault();
+  const [x, y] = pointAt(e), big = 44 / Math.min(W, H);
+  if (d.raid && Math.hypot((x - d.raid.x) * W, (y - .47) * H) < 56) { shoo(g); beep(240, .12); return; }
+  const [bx, by, bw, bh] = bannerBox();
+  if (d.banner && x > bx && x < bx + bw && y > by - .02 && y < by + bh + .02) { tear(g); beep(140 + d.banner?.hp * 20 || 500, .05, 'sawtooth'); return; }
+  let best = null, gap = 48;
+  for (const c of queue(d, 1)) { const far = Math.hypot((c.px - x) * W, (c.py - y) * H); if (far < gap) { gap = far; best = c; } }
+  if (best && grab(g, best)) { heldC = best; $('cv').setPointerCapture(e.pointerId); }
+});
+$('cv').addEventListener('pointermove', e => {
+  if (!heldC || heldC.st !== 'held') return;
+  const [x, y] = pointAt(e); heldC.x = heldC.px = x; heldC.y = heldC.py = y;
+});
+const release = e => {
+  if (heldC && g && g.d) { const [x, y] = pointAt(e); if (drop(g, heldC, Math.min(.98, Math.max(.02, x)), Math.min(.98, Math.max(.5, y)))) beep(880, .12, 'triangle'); }
+  heldC = null;
+};
+$('cv').addEventListener('pointerup', release); $('cv').addEventListener('pointercancel', release);
+
+function events() {
+  const d = g.d;
+  for (const e of d.ev.splice(0)) {
+    if (e.k === 'ding') beep(660, .05, 'sine');
+    if (e.k === 'warn') beep(330, .12, 'square');
+    if (e.k === 'bust') { beep(120, .35, 'sawtooth', .08); heldC = null; }
+    if (e.k === 'banner') beep(180, .25, 'sawtooth');
+    if (e.k === 'say') bubbles.push(e.at ? { x: e.at.x, y: e.at.y - .08, text: e.text, t: 1.6 } : { x: e.shop ? .75 : .25, y: e.shop ? .27 : .42, text: e.text, t: 2.2, col: e.shop ? '#ffd9d3' : '#fff' });
+    if (e.k === 'serve') bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .07, text: e.good ? `캬~ +${e.pay.toLocaleString('ko-KR')}` : '식었네...', t: 1.2, col: e.good ? '#fff27a' : '#fff' });
+  }
+}
+function hud() {
+  const d = g.d;
+  $('mySales').textContent = won(d.sales[0]); $('rvSales').textContent = won(d.sales[1]);
+  $('clock').textContent = `${g.day + 1}일째\n`; $('clock').innerHTML = `${g.day + 1}일째<br>${Math.max(0, Math.ceil(DAY_LEN - d.t))}초`;
+  const all = d.sales[0] + d.sales[1]; $('tugIn').style.width = (all ? d.sales[0] / all * 100 : 50) + '%';
+  d.pots.forEach((p, i) => {
+    const b = $('pots').children[i], s = p.s, late = s === 'ready' && p.age >= GOOD_AGE;
+    b.className = 'pot' + (s === 'ready' ? (late ? ' late' : ' go') : s === 'burnt' ? ' burnt' : '');
+    b.style.setProperty('--p', s === 'cook' ? (1 - p.t / cookTime(g)) * 100 : s === 'ready' ? (1 - p.age / BURN_AGE) * 100 : 0);
+    b.firstChild.textContent = s === 'cook' ? '끓는 중' : s === 'burnt' ? '넘침' : late ? '식는다!' : '지금!';
+  });
+  $('aCall').disabled = d.cd.call > 0;
+  $('aRice').disabled = d.cd.rice > 0;
+}
+function loop(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (g && g.d) {
+    stepDay(g, dt); events(); hud();
+    if (g.d.over) dayOver();
+  }
+  draw(); requestAnimationFrame(loop);
+}
+[['aCall', 'call'], ['aRice', 'rice']].forEach(([id, a]) => {
+  $(id).onclick = () => { if (g && g.d && useAct(g, a)) beep(300, .1); };
+});
+addEventListener('resize', fit);
+fit(); title(); requestAnimationFrame(loop);
+</script>
