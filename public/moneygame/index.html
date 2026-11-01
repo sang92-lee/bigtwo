@@ -121,7 +121,7 @@ function A3reset(){if(window.stageReset)stageReset()}
 function best(){try{return +localStorage.getItem('room')||0}catch(e){return 0}}
 function start(){A3reset();p0=START;cart=[];met=false;rmsg='';P=NAMES.map((n,i)=>({i,n,hp:70,hate:0,like:0,on:true,greed:Math.random()*.5}));const m=[0,1,2,3,4,5].sort(()=>Math.random()-.5);P.slice(1).forEach((p,k)=>p.mind=m[k%6]);stash=0;voted=[];prize=START;p0=START;P.forEach(p=>p.f='평온');day=1;log=['첫날입니다. 다들 서로 눈치만 봅니다.'];draw()}
 function draw(){window.quiet=false;window.stagePhase&&stagePhase('');const lost=p0-prize;
-  if(lost>=1500&&window.stageBuzz)setTimeout(stageBuzz,500);
+  if(lost>=1500&&window.stageBuzz)setTimeout(()=>stageBuzz(),500);
   $.innerHTML=`<div class="prize"><span class="sub">${day}일째 아침</span><b>${man(prize)}</b>${lost>0?`<span class="loss">간밤에 -${man(lost)}</span>`:''}</div>${grid()}<div class="log">${(day==1?['첫날입니다. 다들 서로 눈치만 봅니다.']:[lost?`간밤에 ${man(lost)}이 사라졌습니다. 누가 썼을까요?`:'간밤엔 아무도 돈을 쓰지 않았습니다.',...log]).join('<br>')}</div><div class="menu" style="grid-template-columns:1fr"><button class="main" id="dayGo">오늘의 사건 보기</button></div>`;
   dayGo.onclick=()=>{log=[];event0()}}
 function event0(){const ai=live().slice(1),x=ai[R(ai.length)],y=ai.filter(p=>p!=x)[0]||x,me=P[0],hungry=[...ai].sort((p,q)=>p.hp-q.hp)[0];
@@ -195,10 +195,10 @@ function tally(mine,pool){const c={},L=live(),me=P[0],by=[];c[mine]=1;voted.push
   const top=Math.max(...Object.values(c)),ids=Object.keys(c).filter(k=>c[k]==top);if(ids.length>1&&!pool)return revote(ids.map(k=>P[+k]),top);const out=P[+ids[R(ids.length)]];
   out.on=false;log=[...log.filter(x=>x.includes('동맹')),`${out.n}가 ${top}표로 방에서 쫓겨났습니다.`,by.length?`나를 찍은 사람: ${by.join(', ')}`:'아무도 나를 찍지 않았습니다.'];
   if(!out.i)return end(`${top}표를 받고 쫓겨났습니다`);next()}
-function end(fail){const take=(fail?0:Math.floor(prize/live().length))+stash;
+function end(fail){const take=Math.max(0,(fail?0:Math.floor(prize/live().length))+stash);
   try{if(take>best())localStorage.setItem('room',take)}catch(e){}
   const text=fail?`머니게임: ${day}일째에 ${fail.replace('습니다','음')}. 상금 0원`:`머니게임: 14일을 버텨 ${man(take)} 획득, 생존 ${live().length}명`;
-  $.innerHTML=`<p class="sub" style="margin-top:14px">${fail?day+'일째':'14일을 버텼습니다'}</p><div class="big">${man(take)}</div><p>${fail||`남은 상금 ${man(prize)}을 ${live().length}명이 나눴습니다`}</p>${stash?`<p class="sub">빼돌린 ${man(stash)} 포함</p>`:''}${grid()}<div class="log">${P.slice(1).map(p=>`${p.n}: ${MIND[p.mind][0]}${p.camp?' · 패거리 있음':''}, ${MIND[p.mind][1]}`).join('<br>')}</div>
+  $.innerHTML=`<p class="sub" style="margin-top:14px">${fail?day+'일째':'14일을 버텼습니다'}</p><div class="big">${man(take)}</div><p>${fail||`남은 상금 ${man(prize)}을 ${live().length}명이 나눴습니다`}</p>${stash>0?`<p class="sub">빼돌린 ${man(stash)} 포함</p>`:''}${grid()}<div class="log">${P.slice(1).map(p=>`${p.n}: ${MIND[p.mind][0]}${p.camp?' · 패거리 있음':''}, ${MIND[p.mind][1]}`).join('<br>')}</div>
   <div class="menu" style="grid-template-columns:1fr"><button class="main" id="re">다시 들어가기</button><button id="sh" style="text-align:center">결과 공유</button></div>`;
   re.onclick=start;sh.onclick=async()=>{try{if(navigator.share)await navigator.share({text});else{await navigator.clipboard.writeText(text);sh.textContent='복사했어요'}}catch(e){}}}
 function initStage(){
@@ -316,5 +316,19 @@ const _vote=vote;vote=()=>{window.stagePhase&&stagePhase('vote');log=[...log,...
  }
 try{P=NAMES.map((n,i)=>({i,n,hp:70,on:true,f:'평온'}));initStage()}catch(e){document.getElementById('stage').style.display='none';document.getElementById('app').style.marginTop=0}
 
+// 소리: 파일 없이 브라우저에서 바로 합성한다
+let AC=null,mute=false;try{mute=localStorage.getItem('roomMute')=='1'}catch(e){}
+function tone(f,d=.12,type='sine',v=.12,w=0){if(!AC||mute)return;const t=AC.currentTime+w,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d)}
+const SND={tap:()=>tone(520,.05,'triangle',.07),coin:()=>{tone(988,.08,'square',.05);tone(1319,.25,'square',.05,.08)},
+ morning:()=>[523,659,784].forEach((f,i)=>tone(f,.3,'sine',.09,i*.12)),night:()=>[523,392,330,262].forEach((f,i)=>tone(f,.45,'sine',.09,i*.2)),
+ buzz:()=>{for(let i=0;i<14;i++)tone(110+Math.random()*90,.2,'sawtooth',.018,i*.16)},vote:()=>[0,.3,.6].forEach(w=>tone(82,.25,'triangle',.22,w)),
+ out:()=>[440,349,262,175].forEach((f,i)=>tone(f,.35,'triangle',.13,i*.18)),win:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.4,'triangle',.12,i*.14)),lose:()=>[392,330,262].forEach((f,i)=>tone(f,.6,'sine',.13,i*.28))};
+addEventListener('pointerdown',e=>{if(!AC){try{AC=new (window.AudioContext||webkitAudioContext)()}catch(x){}}else if(AC.state=='suspended')AC.resume();if(e.target.closest&&e.target.closest('button'))SND.tap()},true);
+setInterval(()=>{if(!AC||mute||document.hidden)return;const sc=[262,294,330,392,440,523];tone(sc[R(6)]*(window.quiet?.5:1),1.6,'sine',.022)},1500);
+{const b=document.createElement('button');b.style.cssText='position:absolute;top:8px;right:8px;z-index:9;width:32px;height:32px;border-radius:50%;background:#f5eee2;color:#4a3b32;font-size:12px';const lab=()=>b.textContent=mute?'끔':'켬';lab();b.title='소리';b.onclick=()=>{mute=!mute;lab();try{localStorage.setItem('roomMute',mute?'1':'0')}catch(e){}};document.getElementById('stage').appendChild(b)
+ const wrap=(fn,snd)=>function(...a){snd(...a);return fn.apply(this,a)};
+ buy=wrap(buy,(p,f)=>{if(!p.i&&f.c)SND.coin()});vote=wrap(vote,SND.vote);draw=wrap(draw,SND.morning);next=wrap(next,SND.night);revote=wrap(revote,SND.vote);
+ end=wrap(end,x=>x?SND.lose():SND.win());const _t=tally;tally=(m,pl)=>{const n=live().length;_t(m,pl);if(live().length<n&&P[0].on)SND.out()};
+ if(window.stageBuzz){const _b=stageBuzz;window.stageBuzz=()=>{SND.buzz();_b()}}}
 home();
 </script></body></html>
