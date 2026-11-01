@@ -123,7 +123,7 @@ const CHAPTERS = [
 const FIRE = [4.4, 3.5, 2.8, 2.2, 1.7];   // 화력 단계별 끓이는 시간
 const COST = { taste: [120000, 300000, 600000, 1000000], fire: [100000, 260000, 520000, 900000], pots: [200000, 520000] };
 const FINE = 12000, DAY_LEN = 50, BURN_AGE = 2, DAYS = 3;
-const APPROACH = 1.2, PERFECT = .13, GOOD = .35, LOCK = .5, COMBO_PAY = .02, COMBO_PULL = .12;
+const APPROACH = 1.2, PERFECT = .13, GOOD = .35, LOCK = .5, FLAVOR_UP = .4, FLAVOR_DOWN = 1, FLAVOR_MAX = 3, FLAVOR_PAY = .04, COMBO_PAY = .02, COMBO_PULL = .12;
 const BROTH_LOW = 20, BROTH_BOWL = 4, BROTH_POUR = 38, GOLD_NEAR = 5, GOLD_BOWLS = 5, GOLD_PAY = .15, BAD_PAY = .2;
 const BANNERS = [
   ['3초 국밥! 앉기도 전에 나옴', '3초면 컵라면도 안 익음'], ['원조 중의 원조', '원조의 원조의 할머니'],
@@ -159,7 +159,7 @@ function startDay(g) {
   const ch = CHAPTERS[g.ch];
   const pots = []; for (let i = 0; i < g.pots; i++) pots.push({ s: 'cook', t: cookTime(g) * (.6 + i * .25), age: 0, cuts: 0 });
   g.d = { t: 0, next: .3, people: [], pots, sales: [0, 0], served: [0, 0], lost: 0, spent: 0, tips: 0, buff: [0, 0], banner: null, bt: ch.banner * .6,
-    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, complaints: 0, reviews: [], broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0 };
+    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, complaints: 0, reviews: [], flavor: 0, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0 };
 }
 const queue = (d, shop) => d.people.filter(c => c.shop === shop && c.st === 'queue');
 const coming = (d, shop) => d.people.filter(c => c.shop === shop && (c.st === 'queue' || c.st === 'walk')).length;
@@ -168,7 +168,7 @@ function choose(g, c, r) {
   const d = g.d, ch = CHAPTERS[g.ch], w = TYPES[c.type];
   const mineServe = (cookTime(g) + .8) / g.pots;
   const val = (taste, price, wait) => w.t * taste + w.p * (9000 - price) / 1000 - w.s * wait / 4;
-  const me = val(g.taste + 1.2 + g.rep + (soup(d) !== 'ok' ? -1.5 : d.gold > 0 ? .8 : 0) + Math.min(d.combo * COMBO_PULL, 1.2), g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
+  const me = val(g.taste + 1.2 + g.rep + (soup(d) !== 'ok' ? -1.5 : d.gold > 0 ? .8 : 0) + Math.min(d.combo * COMBO_PULL, 1.2) + d.flavor * .5, g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
   // 앞서갈수록 왕사장도 악착같이 달라붙는다
   const chase = Math.min(3.5, Math.max(0, (d.sales[0] - d.sales[1]) / (g.price * 5)));
   const rv = val(ch.rt, g.rp, coming(d, 1) * d.rs) + (d.buff[1] > 0 ? 2.2 : 0) + chase;
@@ -339,8 +339,9 @@ function press(g, i) {
   if (off === null || off < -APPROACH) return null;
   const far = Math.abs(off);
   p.lock = far <= PERFECT ? 'perfect' : far <= GOOD ? 'good' : off < 0 ? 'raw' : 'late'; p.lockT = LOCK;
-  if (p.lock === 'perfect') { d.combo++; d.best = Math.max(d.best, d.combo); d.perfect++; }
-  if (p.lock === 'raw' || p.lock === 'late') d.combo = 0;
+  // 딱 맞춘 만큼 오늘 국밥이 맛있어지고, 망치면 맛이 뚝 떨어진다
+  if (p.lock === 'perfect') { d.combo++; d.best = Math.max(d.best, d.combo); d.perfect++; d.flavor = Math.min(FLAVOR_MAX, d.flavor + FLAVOR_UP); }
+  if (p.lock === 'raw' || p.lock === 'late') { d.combo = 0; d.flavor = Math.max(0, d.flavor - FLAVOR_DOWN); }
   d.ev.push({ k: 'grade', g: p.lock, combo: d.combo });
   return p.lock;
 }
@@ -349,7 +350,7 @@ function serve(g, i) {
   p.lock = null;
   const head = queue(d, 0)[0];
   if (head) {
-    const base = { perfect: 1.2 + Math.min(d.combo, 10) * COMBO_PAY, good: 1.1, late: 1, raw: 0 }[grade], thin = soup(d) !== 'ok';
+    const base = { perfect: 1.2 + Math.min(d.combo, 10) * COMBO_PAY + d.flavor * FLAVOR_PAY, good: 1.1, late: 1, raw: 0 }[grade], thin = soup(d) !== 'ok';
     // 손님이 한 그릇마다 별점을 매긴다. 맛없으면 불만이 뒷사람에게도 번진다
     const star = Math.max(1, { perfect: 5, good: 4, late: 2, raw: 1 }[grade] - (thin ? 2 : 0));
     g.rep = Math.max(-1.5, Math.min(1.5, g.rep * .92 + (star - 3) / 1.33 * .08));
@@ -367,7 +368,7 @@ function serve(g, i) {
     d.broth = Math.max(0, d.broth - BROTH_BOWL);
     d.sales[0] += pay; d.served[0]++; d.spent += bowlCost(g);
     head.st = 'leave';
-    d.ev.push({ k: 'serve', at: head, good: grade === 'perfect' || grade === 'good', pay, cuts: p.cuts });
+    d.ev.push({ k: 'serve', at: head, good: grade === 'perfect' || grade === 'good', best: grade === 'perfect', pay, cuts: p.cuts });
   }
   p.s = 'cook'; p.t = cookTime(g); p.age = 0; p.cuts = 0;
   return grade;
@@ -639,7 +640,7 @@ function tutNext() {
 function tutEnd() {
   const d = g.d; g.tutDone = true; tut = -1;
   d.pots.forEach(p => { p.s = 'cook'; p.t = cookTime(g); p.lock = null; p.cuts = 0; });
-  Object.assign(d, { tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
+  Object.assign(d, { flavor: 0, complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
   $('hint').hidden = true; $('finger').hidden = true;
   bubbles.push({ x: .5, y: .5, text: '연습 끝! 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
 }
@@ -777,7 +778,15 @@ function draw() {
   }
   d.people.slice().sort((a, b) => a.py - b.py).forEach(person);
   pops = pops.filter(p => (p.t -= 1 / 60) > 0);
-  for (const p of pops) drawGukbap(ctx, p.x * W, p.y * H - (1.2 - p.t) * 26, Math.min(W, H) * .05);
+  for (const p of pops) {
+    const px = p.x * W, py = p.y * H - (1.2 - p.t) * 26, size = Math.min(W, H) * (p.best ? .07 : .05);
+    if (p.best) {
+      ctx.fillStyle = '#ffd21f'; ctx.globalAlpha = .55; ctx.beginPath(); ctx.arc(px, py, size * 1.7, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      const spin = performance.now() / 160;
+      for (let i = 0; i < 4; i++) text('✦', px + Math.cos(spin + i * 1.57) * size * 1.7, py + Math.sin(spin + i * 1.57) * size * 1.2, 15, '#fff27a');
+    }
+    drawGukbap(ctx, px, py, size);
+  }
   bubbles = bubbles.filter(b => (b.t -= 1 / 60) > 0); bubbles.forEach(bubble);
   drawGrade();
   drawCloseup();
@@ -870,8 +879,8 @@ function events() {
     if (e.k === 'banner') sfx.laugh();
     if (e.k === 'say' && e.shop === 1) voice(e.text, .55, 1.15);
     if (e.k === 'say') bubbles.push(e.at ? { x: e.at.x, y: e.at.y - .08, text: e.text, t: 1.6 } : { x: e.shop ? .75 : .25, y: e.shop ? .27 : .42, text: e.text, t: 2.2, col: e.shop ? '#ffd9d3' : '#fff' });
-    if (e.k === 'serve') { pops.push({ x: e.at.x, y: (e.at.py || .6) - .03, t: 1.2 }); if (e.good) sfx.kya(); }
-    if (e.k === 'serve') bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .07, text: e.cuts >= 3 ? `고기 듬뿍! +${e.pay.toLocaleString('ko-KR')}` : e.good ? `캬~ +${e.pay.toLocaleString('ko-KR')}` : '식었네...', t: 1.2, col: e.good ? '#fff27a' : '#fff' });
+    if (e.k === 'serve') { pops.push({ x: e.at.x, y: (e.at.py || .6) - .03, t: 1.2, best: e.best }); if (e.good) sfx.kya(); }
+    if (e.k === 'serve') bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .07, text: e.cuts >= 3 ? `고기 듬뿍! +${e.pay.toLocaleString('ko-KR')}` : e.best ? `더 맛있다! +${e.pay.toLocaleString('ko-KR')}` : e.good ? `캬~ +${e.pay.toLocaleString('ko-KR')}` : '식었네...', t: 1.2, col: e.good ? '#fff27a' : '#fff' });
   }
 }
 function hud() {
@@ -893,7 +902,7 @@ function hud() {
   const near = d.pots.some(p => p.s === 'cook' && p.t <= APPROACH && queue(d, 0).length), cue = $('cue');
   const bad = soup(d);
   cue.className = near || d.combo > 1 || d.gold || bad !== 'ok' ? 'go' : '';
-  cue.textContent = bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : '육수통은 금색 선에서 손을 떼세요';
+  cue.textContent = bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : '육수통은 금색 선에서 손을 떼세요';
   $('aCall').disabled = d.cd.call > 0;
   $('aRice').disabled = d.cd.rice > 0;
   const level = Math.min(100, d.broth) / 100, inner = $('pour').clientHeight - 3;
