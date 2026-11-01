@@ -25,7 +25,9 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 #street { flex: 1; min-height: 0; position: relative } canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none }
 #hint { position: absolute; left: 0; right: 0; top: 0; background: var(--sign); color: var(--sign-ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: center; font: 400 18px/1.3 var(--display) }
 #hint[hidden] { display: none } #hint span { flex: 1; min-width: 0 } #hint button { background: transparent; font: 13px var(--body); text-decoration: underline; flex: none }
-#finger { position: absolute; font-size: 44px; line-height: 1; pointer-events: none; z-index: 4; transform: translate(-30%, 0) }
+#finger { position: absolute; width: 64px; height: 64px; pointer-events: none; z-index: 4; transform: translate(-16px, -16px); filter: drop-shadow(0 3px 3px #15342f66) }
+#finger::before { content: ""; position: absolute; left: -10px; top: -10px; width: 52px; height: 52px; border: 4px solid var(--sign); border-radius: 50%; box-sizing: border-box; animation: ping .9s infinite }
+@keyframes ping { from { transform: scale(.55); opacity: 1 } to { transform: scale(1.35); opacity: 0 } }
 #hero { width: 100%; max-width: 280px; height: auto; align-self: center; flex: none }
 #mute { position: absolute; right: 8px; bottom: 8px; background: var(--ink); color: var(--paper); padding: 6px 10px; font-size: 13px }
 #desk { background: var(--steel); border-top: 5px solid var(--ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px }
@@ -70,7 +72,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 .ghost { background: transparent; color: var(--paper); padding: 8px; font-size: 14px; text-decoration: underline; flex: none }
 table { width: 100%; border-collapse: collapse; background: var(--paper); color: var(--ink); font-variant-numeric: tabular-nums }
 td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400 } td:first-child, th:first-child { text-align: left } tr + tr td { border-top: 1px solid var(--steel) }
-@media (prefers-reduced-motion: reduce) { .pot.go i, #pour.bad { animation: none } }
+@media (prefers-reduced-motion: reduce) { .pot.go i, #pour.bad, #finger::before { animation: none } }
 </style>
 <div id="app">
   <div id="top">
@@ -95,7 +97,7 @@ td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400
       <button class="act" id="aBowl">왕사장 맞히기 <span id="bowlN">3</span><small id="aBowlNote">왕사장이 나오면 눌러요</small></button>
     </div>
   </div>
-  <div id="finger" hidden>👆</div>
+  <div id="finger" hidden><svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><path d="M26 26 58 58" stroke="#15342f" stroke-width="10" stroke-linecap="round"/><path d="M26 26 58 58" stroke="#dfe6e6" stroke-width="5" stroke-linecap="round"/><circle cx="16" cy="16" r="14" fill="#dfe6e6" stroke="#15342f" stroke-width="3"/><circle cx="16" cy="16" r="9" fill="#fff3d4"/><path d="M11 13h7M13 19h6" stroke="#b7795a" stroke-width="3" stroke-linecap="round"/></svg></div>
   <div id="sheet" hidden></div>
 </div>
 <script id="logic">
@@ -139,10 +141,14 @@ const CH_TAUNTS = [
   ['학생들은 내 편이야', '돈 없으면 머리를 써~'], ['넥타이 부대 다 내 손님', '3초 지났다!'],
   ['네 혀가 내 혀를 이길까?', '국물은 거짓말을 안 해'],
 ];
+const COMPLAINTS = { raw: ['아직 안 익었잖아요! 환불해 주세요', '고기가 살아 있어요!'], late: ['식은 국밥을 누가 먹어요', '국밥이 왜 미지근해요?'], thin: ['국물이 맹물이네', '이게 국밥이에요, 물이에요?'] };
+const PRAISES = ['인생 국밥이에요', '할머니 손맛 그대로', '국물이 끝내줘요', '또 올게요!'];
+const pick = (list, r = Math.random) => list[Math.floor(r() * list.length)];
 const TAUNTS = ['손님 없어 보이네?', '그 국물 맹물 아니야?', '우리 집 줄 보이지?', '문 닫을 때 말해~', '솥 하나 더 빌려줄까?'];
 
 function newGame() { return { ch: 0, day: 0, money: 30000, taste: 0, fire: 0, pots: 2, price: 8000, rep: 0, rp: CHAPTERS[0].rp, weekMe: 0, weekRv: 0, snap: null }; }
 const cookTime = g => FIRE[g.fire];
+const stars = g => Math.max(1, Math.min(5, 3 + g.rep * 1.33));
 const soup = d => d.broth < BROTH_LOW ? 'thin' : 'ok';
 const bowlCost = g => 2200 + g.taste * 500;
 function snapshot(g) { g.snap = { money: g.money, taste: g.taste, fire: g.fire, pots: g.pots, price: g.price }; }
@@ -153,7 +159,7 @@ function startDay(g) {
   const ch = CHAPTERS[g.ch];
   const pots = []; for (let i = 0; i < g.pots; i++) pots.push({ s: 'cook', t: cookTime(g) * (.6 + i * .25), age: 0, cuts: 0 });
   g.d = { t: 0, next: .3, people: [], pots, sales: [0, 0], served: [0, 0], lost: 0, spent: 0, tips: 0, buff: [0, 0], banner: null, bt: ch.banner * .6,
-    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0 };
+    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, complaints: 0, reviews: [], broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0 };
 }
 const queue = (d, shop) => d.people.filter(c => c.shop === shop && c.st === 'queue');
 const coming = (d, shop) => d.people.filter(c => c.shop === shop && (c.st === 'queue' || c.st === 'walk')).length;
@@ -215,7 +221,7 @@ function stepDay(g, dt, r = Math.random) {
     d.raid.x -= .46 / 3.2 * dt;
     if (d.raid.x <= .3) {
       const head = queue(d, 0)[0];
-      if (head) { head.shop = 1; head.st = 'walk'; head.moved = true; head.wait = 10; g.rep = Math.max(-1, g.rep - .05); d.lost++; d.ev.push({ k: 'say', shop: 0, text: '왕사장이 손님을 데려갔어요!' }); }
+      if (head) { head.shop = 1; head.st = 'walk'; head.moved = true; head.wait = 10; g.rep = Math.max(-1.5, g.rep - .05); d.lost++; d.ev.push({ k: 'say', shop: 0, text: '왕사장이 손님을 데려갔어요!' }); }
       endRaid(d, r);
     }
   }
@@ -228,7 +234,7 @@ function stepDay(g, dt, r = Math.random) {
       if (c.wait <= 0) {
         if (!c.moved) {
           c.moved = true; c.st = 'walk'; c.wait = 10; c.shop = 1 - c.shop;
-          if (c.shop === 1) { g.rep = Math.max(-1, g.rep - .06); d.lost++; d.ev.push({ k: 'say', at: c, text: '옆집 갈래!' }); }
+          if (c.shop === 1) { g.rep = Math.max(-1.5, g.rep - .06); d.lost++; d.ev.push({ k: 'say', at: c, text: '옆집 갈래!' }); }
         } else { c.st = 'leave'; if (c.shop === 0) d.lost++; }
       }
     }
@@ -250,7 +256,7 @@ function stepDay(g, dt, r = Math.random) {
     } else if (p.s === 'ready') {
       p.age += dt;
       if (d.tut && p.age > .8) { p.s = 'cook'; p.t = APPROACH + .5; p.age = 0; }
-      else if (p.age >= BURN_AGE) { p.s = 'burnt'; p.t = 1.6; p.cuts = 0; g.rep = Math.max(-1, g.rep - .08); d.combo = 0; d.ev.push({ k: 'grade', g: 'burnt', combo: 0 }); }
+      else if (p.age >= BURN_AGE) { p.s = 'burnt'; p.t = 1.6; p.cuts = 0; g.rep = Math.max(-1.5, g.rep - .08); d.combo = 0; d.ev.push({ k: 'grade', g: 'burnt', combo: 0 }); }
     } else if (p.s === 'burnt') { p.t -= dt; if (p.t <= 0) { p.s = 'cook'; p.t = cookTime(g); } }
   });
 
@@ -281,7 +287,7 @@ function drop(g, c, x, y) {
 }
 function busted(g, c) {
   const d = g.d;
-  c.st = 'walk'; c.shop = 1; d.spent += FINE; d.cd.steal = 6; g.rep = Math.max(-1, g.rep - .15);
+  c.st = 'walk'; c.shop = 1; d.spent += FINE; d.cd.steal = 6; g.rep = Math.max(-1.5, g.rep - .15);
   d.ev.push({ k: 'bust' }); d.ev.push({ k: 'say', shop: 1, text: '남의 손님을 훔쳐?! 벌금 12,000원!' });
   if (!d.raid) startRaid(d);
 }
@@ -343,12 +349,23 @@ function serve(g, i) {
   p.lock = null;
   const head = queue(d, 0)[0];
   if (head) {
-    const base = { perfect: 1.2 + Math.min(d.combo, 10) * COMBO_PAY, good: 1.1, late: 1, raw: .6 }[grade];
-    const rate = base + p.cuts * CUT_TIP + (soup(d) !== 'ok' ? -BAD_PAY : d.gold > 0 ? GOLD_PAY : 0), pay = Math.round(g.price * rate / 100) * 100;
+    const base = { perfect: 1.2 + Math.min(d.combo, 10) * COMBO_PAY, good: 1.1, late: 1, raw: 0 }[grade], thin = soup(d) !== 'ok';
+    // 손님이 한 그릇마다 별점을 매긴다. 맛없으면 불만이 뒷사람에게도 번진다
+    const star = Math.max(1, { perfect: 5, good: 4, late: 2, raw: 1 }[grade] - (thin ? 2 : 0));
+    g.rep = Math.max(-1.5, Math.min(1.5, g.rep * .92 + (star - 3) / 1.33 * .08));
+    if (star <= 2) {
+      const line = pick(COMPLAINTS[grade === 'raw' || grade === 'late' ? grade : 'thin']);
+      d.complaints++; d.reviews.push({ star, line });
+      queue(d, 0).slice(1, 3).forEach(c => { c.wait -= 4; });
+      d.ev.push({ k: 'review', at: head, star, line });
+    } else if (star === 5 && Math.random() < .3) {
+      const line = pick(PRAISES); d.reviews.push({ star, line });
+      d.ev.push({ k: 'review', at: head, star, line });
+    }
+    const rate = base && base + p.cuts * CUT_TIP + (thin ? -BAD_PAY : d.gold > 0 ? GOLD_PAY : 0), pay = Math.round(g.price * rate / 100) * 100;
     if (d.gold > 0) d.gold--;
     d.broth = Math.max(0, d.broth - BROTH_BOWL);
     d.sales[0] += pay; d.served[0]++; d.spent += bowlCost(g);
-    g.rep = Math.max(-1, Math.min(1.5, g.rep + { perfect: .03, good: .01, late: -.02, raw: -.04 }[grade]));
     head.st = 'leave';
     d.ev.push({ k: 'serve', at: head, good: grade === 'perfect' || grade === 'good', pay, cuts: p.cuts });
   }
@@ -382,8 +399,8 @@ function useAct(g, a) {
 
 function endDay(g) {
   const d = g.d, ch = CHAPTERS[g.ch];
-  const profit = d.sales[0] - d.spent - ch.rent, res = { me: d.sales[0], rv: d.sales[1], servedMe: d.served[0], servedRv: d.served[1], spent: d.spent, rent: ch.rent, profit, perfect: d.perfect, best: d.best, lost: d.lost, stolen: d.stolen, hits: d.hits };
-  g.money += profit; g.weekMe += d.sales[0]; g.weekRv += d.sales[1]; g.rep *= .7; g.day++;
+  const profit = d.sales[0] - d.spent - ch.rent, res = { me: d.sales[0], rv: d.sales[1], servedMe: d.served[0], servedRv: d.served[1], spent: d.spent, rent: ch.rent, profit, perfect: d.perfect, best: d.best, lost: d.lost, stolen: d.stolen, hits: d.hits, complaints: d.complaints, reviews: d.reviews.slice(-3), rating: stars(g) };
+  g.money += profit; g.weekMe += d.sales[0]; g.weekRv += d.sales[1]; g.rep *= .9; g.day++;
   // 옆집도 가격을 따라 내린다
   if (g.price < g.rp - 500) g.rp = Math.max(ch.rp - 2000, g.rp - 500);
   g.d = null;
@@ -577,7 +594,8 @@ function dayOver() {
   const line = d.me >= d.rv ? '오늘은 우리가 이겼어요!' : '"오늘 장사 잘되셨나? 하하하!"';
   const table = `<table><tr><th></th><th>우리집</th><th>옆집</th></tr>
     <tr><td>손님</td><td>${d.servedMe}명</td><td>${d.servedRv}명</td></tr><tr><td>매출</td><td>${won(d.me)}</td><td>${won(d.rv)}</td></tr></table>
-    <table><tr><td>재료비</td><td>-${won(d.spent)}</td></tr><tr><td>월세</td><td>-${won(d.rent)}</td></tr><tr><td>오늘 번 돈</td><td>${won(d.profit)}</td></tr><tr><td>딱! 맞춘 국밥</td><td>${d.perfect}그릇</td></tr><tr><td>최고 콤보</td><td>${d.best}</td></tr><tr><td>뺏어 온 손님</td><td>${d.stolen}명</td></tr><tr><td>왕사장 명중</td><td>${d.hits}번</td></tr><tr><td>놓친 손님</td><td>${d.lost}명</td></tr></table>`;
+    <table><tr><td>재료비</td><td>-${won(d.spent)}</td></tr><tr><td>월세</td><td>-${won(d.rent)}</td></tr><tr><td>오늘 번 돈</td><td>${won(d.profit)}</td></tr><tr><td>딱! 맞춘 국밥</td><td>${d.perfect}그릇</td></tr><tr><td>최고 콤보</td><td>${d.best}</td></tr><tr><td>뺏어 온 손님</td><td>${d.stolen}명</td></tr><tr><td>왕사장 명중</td><td>${d.hits}번</td></tr><tr><td>놓친 손님</td><td>${d.lost}명</td></tr><tr><td>불만</td><td>${d.complaints}건</td></tr><tr><td>오늘의 평점</td><td>★${d.rating.toFixed(1)}</td></tr></table>
+    ${d.reviews.length ? '<table>' + d.reviews.map(v => `<tr><td>${'★'.repeat(v.star)} ${v.line}</td></tr>`).join('') + '</table>' : ''}`;
   if (!d.chapter) return show(`<h2>${g.day}일째 저녁</h2><h1>${line}</h1>${table}<button class="main" id="go">다음 날</button>`, () => on('go', morning));
   if (d.chapter === 'lose') return show(`<h2>${DAYS}일 합계 ${won(g.weekMe)} 대 ${won(g.weekRv)}</h2><h1>왕사장에게 졌어요</h1>${table}
     <p>"역시 네 국물은 아직 멀었어."\n\n번 돈은 그대로 두고, 할머니 비상금 30,000원을 보태 이 장을 다시 시작해요.</p><button class="main" id="go">다시 도전</button>`, () => on('go', () => { restore(g); intro(); }));
@@ -599,7 +617,7 @@ function ending(a, b) {
 /* 첫날 튜토리얼: 시간을 세워 두고 손가락으로 하나씩 따라 하게 한다 */
 const TUT = [
   { text: '줄어드는 빨간 원이 솥에 겹칠 때 딱 누르세요!', start(d) { d.tutShop = 0; d.pots[0].s = 'cook'; d.pots[0].t = APPROACH + .5; d.pots[1].t = 99; }, done: d => d.perfect > 0 || d.served[0] > 1,
-    finger(d) { const r = rel($('pots').children[0]); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
+    finger(d) { const r = rel($('pots').children[0]); return [r.x + r.w * .88, r.y + r.h * .88, r.x + r.w * .88, r.y + r.h * .88]; } },
   { text: '육수통을 누르고 있다가 금색 선에서 딱 떼세요!', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
     finger(d) { const r = rel($('pour')); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
   { text: '옆집 손님을 끌어서 우리 집에 놓으세요', start(d) { d.tutShop = 1; }, done: d => d.stolen > 0,
@@ -833,6 +851,10 @@ function events() {
   for (const e of d.ev.splice(0)) {
     if (e.k === 'ding') { sfx.ding(); try { navigator.userActivation?.hasBeenActive && navigator.vibrate && navigator.vibrate(40); } catch (err) {} }
     if (e.k === 'warn') sfx.warn();
+    if (e.k === 'review') {
+      bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .13, text: `${'★'.repeat(e.star)} ${e.line}`, t: 2, col: e.star <= 2 ? '#ffd9d3' : '#fff27a' });
+      if (e.star <= 2) { sfx.cold(); voice(e.line, 1.1, 1.3); }
+    }
     if (e.k === 'soup') { sfx.warn(); gradePop = { text: e.text, col: '#ff9d8a', t: .9 }; }
     if (e.k === 'gold') { sfx.gold(); gradePop = { text: '딱! 황금 육수', col: '#ffd21f', t: 1 }; }
     if (e.k === 'grade') {
@@ -854,6 +876,8 @@ function events() {
 }
 function hud() {
   const d = g.d;
+  $('myName').textContent = `${LOOK[g.ch].me} ★${stars(g).toFixed(1)}`;
+  $('rvName').textContent = `${LOOK[g.ch].rv} ★${Math.min(4.9, 3.1 + g.ch * .4).toFixed(1)}`;
   $('mySales').textContent = won(d.sales[0]); $('rvSales').textContent = won(d.sales[1]);
   $('clock').textContent = `${g.day + 1}일째\n`; $('clock').innerHTML = `${g.day + 1}/${DAYS}일째<br>${Math.max(0, Math.ceil(DAY_LEN - d.t))}초`;
   const all = d.sales[0] + d.sales[1]; $('tugIn').style.width = (all ? d.sales[0] / all * 100 : 50) + '%';
