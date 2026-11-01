@@ -23,16 +23,28 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 #clock { text-align: center; font-size: 12px; line-height: 1.3 }
 #tug { height: 8px; background: var(--rival); overflow: hidden } #tugIn { height: 100%; width: 50%; background: var(--sign); transition: width .3s }
 #street { flex: 1; min-height: 0; position: relative } canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none }
+#hint { position: absolute; left: 0; right: 0; top: 0; background: var(--sign); color: var(--sign-ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: center; font: 400 18px/1.3 var(--display) }
+#hint[hidden] { display: none } #hint span { flex: 1; min-width: 0 } #hint button { background: transparent; font: 13px var(--body); text-decoration: underline; flex: none }
+#finger { position: absolute; font-size: 44px; line-height: 1; pointer-events: none; z-index: 4; transform: translate(-30%, 0) }
+#hero { width: 100%; max-width: 280px; height: auto; align-self: center; flex: none }
+#mute { position: absolute; right: 8px; bottom: 8px; background: var(--ink); color: var(--paper); padding: 6px 10px; font-size: 13px }
 #desk { background: var(--steel); border-top: 5px solid var(--ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px }
 #pots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px }
 .pot { aspect-ratio: 1; max-height: 92px; justify-self: center; width: 100%; max-width: 92px; border-radius: 50%; position: relative; padding: 7px; background: conic-gradient(var(--c, #8a6a58) calc(var(--p, 0) * 1%), #c9d2d1 0); touch-action: none }
-.pot i { position: absolute; inset: 7px; border-radius: 50%; background: var(--pot); color: var(--paper); display: grid; place-items: center; font: 400 15px/1.1 var(--display); text-align: center }
-.pot.go i { background: var(--sign); color: var(--sign-ink); font-size: 19px; animation: bob .3s infinite alternate } .pot.go { --c: var(--good); box-shadow: 0 0 0 5px var(--sign), 0 0 22px 8px var(--sign) }
+.pot i { position: absolute; inset: 7px; border-radius: 50%; color: var(--paper); display: grid; place-items: center; font: 400 15px/1.1 var(--display); text-align: center }
+.pot i { background: radial-gradient(circle, #6b4334 0 58%, var(--pot) 60%) }
+.pot.go i { background: radial-gradient(circle at 34% 38%, #b7795a 0 9%, transparent 10%), radial-gradient(circle at 68% 64%, #b7795a 0 9%, transparent 10%), radial-gradient(circle at 64% 30%, #5aa84f 0 4%, transparent 5%), radial-gradient(circle at 30% 68%, #5aa84f 0 4%, transparent 5%), radial-gradient(circle, #fff3d4 0 68%, #3b2318 70%); color: var(--sign-ink); font-size: 19px; animation: bob .3s infinite alternate } .pot.go { --c: var(--good); box-shadow: 0 0 0 5px var(--sign), 0 0 22px 8px var(--sign) }
 #cue { height: 24px; display: grid; place-items: center; font: 400 17px var(--display); color: var(--ink) } #cue.go { background: var(--sign); color: var(--sign-ink) }
-.pot.late i { background: #e88a2d; color: var(--ink) } .pot.late { --c: var(--rival) }
-.pot.burnt i { background: #111; }
+.pot.late i { background: radial-gradient(circle, #e8a24a 0 68%, #3b2318 70%); color: var(--ink) } .pot.late { --c: var(--rival) }
+.pot.burnt i { background: #111 }
 .pot:active i { transform: scale(.93) }
 @keyframes bob { to { transform: scale(1.07) } }
+#broth { display: grid; grid-template-columns: 1fr 104px; gap: 8px; align-items: stretch }
+#brothBar { position: relative; background: #3b2318; overflow: hidden; min-height: 38px }
+#brothOk { position: absolute; top: 0; bottom: 0; left: 35%; width: 50%; background: #2f9e62 }
+#brothIn { position: absolute; left: 0; top: 30%; height: 40%; background: #fff3d4; width: 70% }
+#pour { background: var(--tile-deep); color: var(--paper); font: 400 15px/1.1 var(--display); padding: 5px 2px; touch-action: none }
+#pour small { display: block; font: 11px var(--body); opacity: .85 } #pour.on { background: var(--sign); color: var(--sign-ink) }
 #acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
 .act { background: var(--ink); color: var(--paper); padding: 9px 2px; font: 400 16px var(--display); position: relative; overflow: hidden }
 .act small { display: block; font: 12px var(--body); opacity: .8 } .act[disabled] { opacity: .45 }
@@ -63,16 +75,22 @@ td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400
     </div>
     <div id="tug"><div id="tugIn"></div></div>
   </div>
-  <div id="street"><canvas id="cv"></canvas></div>
+  <div id="street"><canvas id="cv"></canvas><button id="mute">소리 켬</button>
+    <div id="hint" hidden><span id="hintText"></span><button id="tutSkip">건너뛰기</button></div></div>
   <div id="desk">
     <div id="cue" role="status"></div>
+    <div id="broth">
+      <div id="brothBar" aria-hidden="true"><i id="brothOk"></i><b id="brothIn"></b></div>
+      <button id="pour">육수 붓기<small>누르고 있기</small></button>
+    </div>
     <div id="pots"></div>
     <div id="acts">
       <button class="act" id="aCall">호객<small>잠깐 손님을 끌어요</small></button>
       <button class="act" id="aRice">공깃밥 서비스<small>2,000원 줄 달래기</small></button>
-      <button class="act" id="aBowl">뚝배기 <span id="bowlN">3</span><small>위로 튕겨 던지기</small></button>
+      <button class="act" id="aBowl">던질 뚝배기 <span id="bowlN">3</span>개<small>위로 튕겨 던지기</small></button>
     </div>
   </div>
+  <div id="finger" hidden>👆</div>
   <div id="sheet" hidden></div>
 </div>
 <script id="logic">
@@ -84,11 +102,11 @@ const TYPES = [
   { n: '미식가', tag: '맛!!', c: '#8b2fb0', p: .15, t: 2.6, s: .3 },
 ];
 const CHAPTERS = [
-  { place: '골목 포장마차', mix: [4, 3, 3, 0], gap: 1.5, rent: 20000, rt: 3.6, rs: 3.6, rp: 8000, banner: 19,
+  { place: '골목 포장마차', mix: [4, 3, 3, 0], gap: 1.5, rent: 20000, rt: 4.3, rs: 3.6, rp: 8000, banner: 19,
     intro: '할머니가 물려주신 솥 두 개로 포장마차를 열었어요.\n\n그런데 개업 첫날, 바로 옆에 커다란 간판이 올라갑니다.\n\n"반갑소. 옆집 왕대박국밥 왕사장이오.\n이 골목 국밥은 내가 접수하지."' },
-  { place: '시장 안 가게', mix: [3, 3, 4, 0], gap: 1.35, rent: 50000, rt: 4.8, rs: 2.8, rp: 8000, banner: 17,
+  { place: '시장 안 가게', mix: [3, 3, 4, 0], gap: 1.35, rent: 50000, rt: 5.6, rs: 2.8, rp: 8000, banner: 17,
     intro: '골목을 이기고 시장에 번듯한 가게를 얻었어요.\n\n짐을 푸는데 옆 가게 셔터가 올라갑니다.\n\n"또 만났네? 네가 가는 곳 옆엔 언제나 내가 있다."\n\n왕사장이 따라왔어요.' },
-  { place: '대학가', mix: [7, 1, 1, 1], gap: 1.2, rent: 80000, rt: 5.4, rs: 2.2, rp: 6500, banner: 15,
+  { place: '대학가', mix: [7, 1, 1, 1], gap: 1.2, rent: 80000, rt: 6.2, rs: 2.2, rp: 6500, banner: 15,
     intro: '대학가로 옮겼어요. 손님은 온통 학생입니다.\n\n옆집에 왕사장의 현수막이 걸렸어요.\n\n"국밥 6,500원. 학생은 돈이 없다."\n\n이곳의 승부는 가격이에요.' },
   { place: '오피스 거리', mix: [1, 7, 1, 1], gap: 1.05, rent: 110000, rt: 6.2, rs: 1.6, rp: 8500, banner: 14,
     intro: '점심시간의 오피스 거리. 넥타이 부대는 10분 안에 먹고 나가야 해요.\n\n"3초 국밥 들어갑니다!"\n\n왕사장이 스톱워치를 들고 서 있어요.\n\n이곳의 승부는 속도예요.' },
@@ -98,15 +116,29 @@ const CHAPTERS = [
 const FIRE = [4.4, 3.5, 2.8, 2.2, 1.7];   // 화력 단계별 끓이는 시간
 const BROTH = [8, 16, 24, 48, 72];        // 맛 단계별 육수 우린 시간
 const COST = { taste: [80000, 200000, 400000, 700000], fire: [70000, 180000, 360000, 640000], pots: [150000, 380000] };
-const DAY_LEN = 50, GOOD_AGE = 2.2, BURN_AGE = 7, DAYS = 3;
+const BROTH_LOW = 35, BROTH_HIGH = 85, BROTH_DRIFT = .7, BROTH_BOWL = 8, BROTH_POUR = 42;
+const FINE = 12000, DAY_LEN = 50, GOOD_AGE = 2.2, BURN_AGE = 7, DAYS = 3;
 const BANNERS = [
   ['3초 국밥! 앉기도 전에 나옴', '3초면 컵라면도 안 익음'], ['원조 중의 원조', '원조의 원조의 할머니'],
   ['사장이 잘생김', '사장이 더 잘생김'], ['오늘 고기 두 배', '어제 고기도 두 배'], ['깍두기 무한 리필', '깍두기가 맛있어야 무한이지'],
+];
+const CH_BANNERS = [
+  [['포장마차계의 샤넬', '샤넬은 국밥 안 팔아요'], ['소주 한 잔 서비스', '우리 집은 이모가 서비스']],
+  [['시장 상인회 추천', '상인회장이 우리 집에서 드심'], ['콩나물 산더미', '옆집 콩나물은 키가 작음']],
+  [['학생증 보여주면 500원 할인', '학생증 없어도 학생 대접'], ['리포트 대신 써 드림', '국밥 먹으면 A+']],
+  [['회의 전 3분 완식', '회의는 우리 집에서 하세요'], ['법인카드 환영', '법인카드가 먼저 찾는 집']],
+  [['미슐랭 별 세 개', '미슐랭 타이어도 우리 단골'], ['육수 100시간', '우리 육수는 할머니 연세만큼']],
+];
+const CH_TAUNTS = [
+  ['포장마차는 비 오면 끝이지?', '이 골목은 내 구역이야'], ['시장 인심은 내가 다 샀어', '네 가게 임대료 얼마야?'],
+  ['학생들은 내 편이야', '돈 없으면 머리를 써~'], ['넥타이 부대 다 내 손님', '3초 지났다!'],
+  ['네 혀가 내 혀를 이길까?', '국물은 거짓말을 안 해'],
 ];
 const TAUNTS = ['손님 없어 보이네?', '그 국물 맹물 아니야?', '우리 집 줄 보이지?', '문 닫을 때 말해~', '솥 하나 더 빌려줄까?'];
 
 function newGame() { return { ch: 0, day: 0, money: 30000, taste: 0, fire: 0, pots: 2, price: 8000, rep: 0, rp: CHAPTERS[0].rp, weekMe: 0, weekRv: 0, snap: null }; }
 const cookTime = g => FIRE[g.fire];
+const brothState = d => d.broth < BROTH_LOW ? 'thin' : d.broth > BROTH_HIGH ? 'salty' : 'ok';
 const bowlCost = g => 2200 + g.taste * 500;
 function snapshot(g) { g.snap = { money: g.money, taste: g.taste, fire: g.fire, pots: g.pots, price: g.price }; }
 function restore(g) { g.money = Math.max(g.money, 0) + 30000; g.day = 0; g.weekMe = g.weekRv = 0; g.rep = 0; g.rp = CHAPTERS[g.ch].rp; }
@@ -116,7 +148,7 @@ function startDay(g) {
   const ch = CHAPTERS[g.ch];
   const pots = []; for (let i = 0; i < g.pots; i++) pots.push({ s: 'cook', t: cookTime(g) * (.6 + i * .25), age: 0, cuts: 0 });
   g.d = { t: 0, next: .3, people: [], pots, sales: [0, 0], served: [0, 0], lost: 0, spent: 0, tips: 0, buff: [0, 0], banner: null, bt: ch.banner * .6,
-    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0 };
+    taunt: 9, cd: { call: 0, rice: 0, steal: 0 }, rs: ch.rs, ev: [], over: false, perfect: 0, stolen: 0, boss: { s: 'away', t: 5 }, raid: null, rt: 8 + r0() * 4, bowls: 3, fly: null, hits: 0, broth: 70, pouring: false, brothState: 'ok' };
 }
 const queue = (d, shop) => d.people.filter(c => c.shop === shop && c.st === 'queue');
 const coming = (d, shop) => d.people.filter(c => c.shop === shop && (c.st === 'queue' || c.st === 'walk')).length;
@@ -125,33 +157,43 @@ function choose(g, c, r) {
   const d = g.d, ch = CHAPTERS[g.ch], w = TYPES[c.type];
   const mineServe = (cookTime(g) + .8) / g.pots;
   const val = (taste, price, wait) => w.t * taste + w.p * (9000 - price) / 1000 - w.s * wait / 4;
-  const me = val(g.taste + 1.2 + g.rep, g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
+  const me = val(g.taste + 1.2 + g.rep + { ok: 0, thin: -1.8, salty: -1.2 }[brothState(d)], g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
   const rv = val(ch.rt, g.rp, coming(d, 1) * d.rs) + (d.buff[1] > 0 ? 2.2 : 0);
   return me + (r() - .5) * 3 >= rv ? 0 : 1;
 }
 
 function stepDay(g, dt, r = Math.random) {
   const d = g.d, ch = CHAPTERS[g.ch]; if (d.over) return;
-  d.t += dt; d.next -= dt;
+  if (!d.tut) d.t += dt;
+  d.next -= dt;
   for (const k in d.cd) d.cd[k] = Math.max(0, d.cd[k] - dt);
   d.buff[0] = Math.max(0, d.buff[0] - dt); d.buff[1] = Math.max(0, d.buff[1] - dt);
-  if (d.banner) { d.banner.t -= dt; if (d.banner.t <= 0) d.banner = null; }
+  if (d.banner && !d.tut) { d.banner.t -= dt; if (d.banner.t <= 0) d.banner = null; }
 
-  if (d.next <= 0 && d.t < DAY_LEN) {
+  if (d.next <= 0 && d.t < DAY_LEN && (!d.tut || coming(d, d.tutShop) < 3)) {
     d.next = ch.gap * (.65 + r() * .7);
     let roll = r() * ch.mix.reduce((a, b) => a + b), type = 0;
     while (roll >= ch.mix[type]) roll -= ch.mix[type++];
     const c = { type, x: .5, y: 1.02, st: 'walk', shop: 0, wait: 13 + r() * 6, moved: false, id: Math.random() };
-    c.shop = choose(g, c, r); d.people.push(c);
+    c.shop = d.tutShop ?? choose(g, c, r); d.people.push(c);
   }
-  d.bt -= dt;
+  if (!d.tut) d.bt -= dt;
   if (d.bt <= 0) {
     d.bt = ch.banner * (.8 + r() * .4);
-    const i = Math.floor(r() * BANNERS.length);
-    d.banner = { i, t: 7, hp: 6 }; d.buff[1] = 7; d.ev.push({ k: 'banner', text: BANNERS[i][0] });
+    const list = BANNERS.concat(CH_BANNERS[g.ch]), [a, b] = list[Math.floor(r() * list.length)];
+    d.banner = { a, b, t: 7, hp: 6 }; d.buff[1] = 7; d.ev.push({ k: 'banner', text: a });
+  }
+  // 육수는 저절로 졸고, 붓는 동안 차오른다. 짜게 두면 평판이 떨어진다
+  if (d.pouring) d.broth = Math.min(100, d.broth + BROTH_POUR * dt);
+  else if (!d.tut) d.broth = Math.max(0, d.broth - BROTH_DRIFT * dt);
+  const taste = brothState(d);
+  if (taste === 'salty' && !d.tut) g.rep = Math.max(-1, g.rep - .03 * dt);
+  if (taste !== d.brothState) {
+    d.brothState = taste;
+    if (taste !== 'ok') d.ev.push({ k: 'broth', text: taste === 'thin' ? '국물이 밍밍해요!' : '너무 짜요!' });
   }
   // 왕사장은 등을 돌렸다가 예고 뒤 노려보고, 건너오는 동안에는 문을 비운다
-  const b = d.boss; b.t -= dt;
+  const b = d.boss; if (!d.tut) b.t -= dt;
   if (d.raid) b.s = 'away';
   else if (b.t <= 0) {
     if (b.s === 'away') { b.s = 'warn'; b.t = 1; d.ev.push({ k: 'warn' }); }
@@ -163,8 +205,8 @@ function stepDay(g, dt, r = Math.random) {
     if (d.fly.t <= 0) landBowl(g);
   }
   if (b.s === 'watch') for (const c of d.people) if (c.st === 'held') busted(g, c);
-  if (!d.raid) { d.rt -= dt; if (d.rt <= 0) startRaid(d); }
-  else {
+  if (!d.raid && !d.tut) { d.rt -= dt; if (d.rt <= 0) startRaid(d); }
+  else if (!d.tut) {
     d.raid.x -= .46 / 3.2 * dt;
     if (d.raid.x <= .3) {
       const head = queue(d, 0)[0];
@@ -172,12 +214,12 @@ function stepDay(g, dt, r = Math.random) {
       endRaid(d, r);
     }
   }
-  d.taunt -= dt;
-  if (d.taunt <= 0) { d.taunt = 8 + r() * 6; d.ev.push({ k: 'say', shop: 1, text: TAUNTS[Math.floor(r() * TAUNTS.length)] }); }
+  if (!d.tut) d.taunt -= dt;
+  if (d.taunt <= 0) { d.taunt = 8 + r() * 6; const list = TAUNTS.concat(CH_TAUNTS[g.ch]); d.ev.push({ k: 'say', shop: 1, text: list[Math.floor(r() * list.length)] }); }
 
   for (const c of d.people) {
     if (c.st === 'queue') {
-      c.wait -= dt;
+      if (!d.tut) c.wait -= dt;
       if (c.wait <= 0) {
         if (!c.moved) {
           c.moved = true; c.st = 'walk'; c.wait = 10; c.shop = 1 - c.shop;
@@ -197,12 +239,12 @@ function stepDay(g, dt, r = Math.random) {
   for (const p of d.pots) {
     if (p.s === 'cook') { p.t -= dt; if (p.t <= 0) { p.s = 'ready'; p.age = 0; d.ev.push({ k: 'ding' }); } }
     else if (p.s === 'ready') {
-      if (queue(d, 0).length) p.age += dt;
+      if (queue(d, 0).length && !d.tut) p.age += dt;
       if (p.age >= BURN_AGE) { p.s = 'burnt'; p.t = 1.6; p.cuts = 0; g.rep = Math.max(-1, g.rep - .08); d.ev.push({ k: 'say', shop: 0, text: '앗, 넘쳤다!' }); }
     } else if (p.s === 'burnt') { p.t -= dt; if (p.t <= 0) { p.s = 'cook'; p.t = cookTime(g); } }
   }
 
-  d.rs -= dt;
+  if (!d.tut) d.rs -= dt;
   if (d.rs <= 0) {
     d.rs = ch.rs * (.85 + r() * .3);
     const head = queue(d, 1)[0];
@@ -224,13 +266,13 @@ function grab(g, c) {
 function drop(g, c, x, y) {
   if (c.st !== 'held') return false;
   c.x = x; c.y = y; c.st = 'walk';
-  if (x < .5) { c.shop = 0; c.moved = true; c.wait = 14; g.d.stolen++; g.d.cd.steal = 2.5; return true; }
+  if (x < .5) { c.shop = 0; c.moved = true; c.wait = 14; g.d.stolen++; g.d.cd.steal = 3.5; return true; }
   return false;
 }
 function busted(g, c) {
   const d = g.d;
-  c.st = 'walk'; c.shop = 1; d.spent += 5000; d.cd.steal = 5; g.rep = Math.max(-1, g.rep - .1);
-  d.ev.push({ k: 'bust' }); d.ev.push({ k: 'say', shop: 1, text: '남의 손님을 훔쳐?! 벌금 5,000원!' });
+  c.st = 'walk'; c.shop = 1; d.spent += FINE; d.cd.steal = 6; g.rep = Math.max(-1, g.rep - .15);
+  d.ev.push({ k: 'bust' }); d.ev.push({ k: 'say', shop: 1, text: '남의 손님을 훔쳐?! 벌금 12,000원!' });
   if (!d.raid) startRaid(d);
 }
 // 연타로 현수막 찢기
@@ -238,7 +280,7 @@ function tear(g) {
   const d = g.d; if (!d.banner) return false;
   d.banner.hp--;
   if (d.banner.hp > 0) return true;
-  d.ev.push({ k: 'say', shop: 0, text: BANNERS[d.banner.i][1] });
+  d.ev.push({ k: 'say', shop: 0, text: d.banner.b });
   d.banner = null; d.buff[1] = 0; d.buff[0] = 4;
   return true;
 }
@@ -275,10 +317,11 @@ function tapPot(g, i) {
   const d = g.d, p = d.pots[i]; if (!p || p.s !== 'ready' || d.over) return null;
   const head = queue(d, 0)[0];
   if (!head) { d.ev.push({ k: 'say', shop: 0, text: '손님이 없어요' }); return null; }
-  const good = p.age < GOOD_AGE, cuts = p.cuts, pay = g.price + Math.round(g.price * ((good ? .1 : 0) + cuts * CUT_TIP) / 100) * 100;
+  const good = p.age < GOOD_AGE && brothState(d) === 'ok', cuts = p.cuts, pay = g.price + Math.round(g.price * ((good ? .1 : 0) + cuts * CUT_TIP) / 100) * 100;
   d.sales[0] += pay; d.served[0]++; d.spent += bowlCost(g);
   if (good) { d.perfect++; g.rep = Math.min(1.5, g.rep + .025); } else g.rep = Math.max(-1, g.rep - .015);
   head.st = 'leave';
+  d.broth = Math.max(0, d.broth - BROTH_BOWL);
   d.ev.push({ k: 'serve', at: head, good, pay, cuts });
   p.s = 'cook'; p.t = cookTime(g); p.age = 0; p.cuts = 0;
   return good;
@@ -321,14 +364,99 @@ const SAVE = 'gukbap-war-1', CUT_PX = 22;
 let g = null, last = 0, ctx, W = 0, H = 0, bubbles = [], steam = [], audio;
 const sheet = $('sheet');
 
-function beep(f, len = .08, type = 'square', vol = .05) {
+/* 소리는 파일 없이 합성한다. 쿵짝 트로트 반주, 보글보글 솥, 칼질, 쨍그랑, 왕사장 목소리 */
+let muted = false, master, koVoice = null, lastVoice = 0, nextStep = 0, step = 0, boilT = 0;
+try { muted = localStorage.getItem('gukbap-mute') === '1'; } catch (e) {}
+function ac() {
+  if (!audio) {
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+    master = audio.createGain(); master.gain.value = muted ? 0 : 1; master.connect(audio.destination);
+  }
+  if (audio.state === 'suspended') audio.resume();
+  return audio;
+}
+function tone(f0, f1, len, type = 'square', vol = .05, delay = 0) {
   try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    const o = audio.createOscillator(), v = audio.createGain();
-    o.type = type; o.frequency.value = f; v.gain.setValueAtTime(vol, audio.currentTime);
-    v.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + len);
-    o.connect(v).connect(audio.destination); o.start(); o.stop(audio.currentTime + len);
+    const a = ac(), t = a.currentTime + delay, o = a.createOscillator(), v = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + len);
+    v.gain.setValueAtTime(vol, t); v.gain.exponentialRampToValueAtTime(.0001, t + len);
+    o.connect(v).connect(master); o.start(t); o.stop(t + len);
   } catch (e) {}
+}
+const beep = (f, len = .08, type = 'square', vol = .05) => tone(f, f, len, type, vol);
+function noise(len, f0, f1, vol = .08, delay = 0, kind = 'bandpass') {
+  try {
+    const a = ac(), t = a.currentTime + delay, b = a.createBuffer(1, Math.max(1, a.sampleRate * len), a.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), v = a.createGain();
+    src.buffer = b; f.type = kind; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + len);
+    v.gain.setValueAtTime(vol, t); v.gain.exponentialRampToValueAtTime(.0001, t + len);
+    src.connect(f).connect(v).connect(master); src.start(t);
+  } catch (e) {}
+}
+function findVoice() { try { koVoice = speechSynthesis.getVoices().find(v => /^ko/i.test(v.lang)) || null; } catch (e) {} }
+try { findVoice(); speechSynthesis.onvoiceschanged = findVoice; } catch (e) {}
+// 한국어 음성이 있는 기기에서는 말하고, 없으면 false를 돌려 합성음으로 대신한다
+function voice(text, pitch = 1, rate = 1.15) {
+  if (muted || !koVoice) return false;
+  const now = performance.now(); if (now - lastVoice < 1300) return true;
+  try {
+    lastVoice = now; speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = koVoice; u.lang = koVoice.lang; u.pitch = pitch; u.rate = rate; speechSynthesis.speak(u);
+    return true;
+  } catch (e) { return false; }
+}
+const sfx = {
+  ding() { tone(988, 988, .1, 'triangle', .12); tone(1319, 1319, .16, 'triangle', .12, .09); },
+  chop() { noise(.035, 2400, 900, .16); tone(190, 120, .04, 'square', .05); },
+  coin() { tone(1319, 1319, .07, 'square', .05); tone(1976, 1976, .16, 'square', .05, .07); },
+  kya() { if (!voice('캬~', 1.3, 1.1)) { tone(520, 980, .14, 'sawtooth', .05); tone(980, 420, .3, 'sawtooth', .05, .14); } },
+  cold() { if (!voice('식었네', .8)) { tone(330, 300, .18, 'triangle', .07); tone(290, 170, .35, 'triangle', .07, .2); } },
+  laugh() { if (!voice('하하하하', .55, 1.25)) for (let i = 0; i < 4; i++) tone(190 - i * 12, 130, .12, 'sawtooth', .07, i * .15); },
+  rip() { noise(.1, 3500, 900, .12); },
+  ripped() { noise(.32, 4500, 400, .18); tone(660, 880, .12, 'square', .05, .22); },
+  whoosh() { noise(.35, 500, 2600, .09); },
+  ring() { [620, 1244, 1871].forEach((f, i) => tone(f, f * .99, 1.1 - i * .25, 'sine', .14 / (i + 1))); tone(70, 40, .4, 'sine', .3, .12); noise(.2, 300, 90, .2, .12); },
+  ouch() { if (!voice('아이고 내 머리야', .6, 1.3)) tone(700, 90, .6, 'sawtooth', .07, .15); },
+  shatter() { for (let i = 0; i < 6; i++) { noise(.07, 6000, 3000, .1, i * .035); tone(1800 + Math.random() * 2400, 1500, .09, 'sine', .04, i * .03); } },
+  pop() { tone(280, 1100, .11, 'sine', .15); },
+  shoo() { tone(900, 160, .28, 'square', .06); },
+  siren() { for (let i = 0; i < 4; i++) tone(i % 2 ? 620 : 880, i % 2 ? 620 : 880, .17, 'square', .06, i * .18); },
+  warn() { tone(330, 330, .1, 'square', .06); tone(330, 330, .1, 'square', .06, .16); },
+  rice() { tone(392, 392, .08, 'triangle', .1); tone(523, 523, .08, 'triangle', .1, .09); tone(659, 659, .16, 'triangle', .1, .18); },
+  call() { tone(440, 660, .12, 'sawtooth', .06); tone(660, 880, .22, 'sawtooth', .06, .12); },
+  gong() { [110, 165, 222].forEach(f => tone(f, f * .97, 1.8, 'sine', .16)); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, i === 3 ? .5 : .13, 'square', .07, i * .13)); },
+  lose() { [392, 370, 349, 262].forEach((f, i) => tone(f, f * (i === 3 ? .8 : 1), i === 3 ? .7 : .22, 'sawtooth', .06, i * .24)); },
+};
+// 쿵짝쿵짝 트로트 반주. 마지막 10초는 빨라진다
+const TUNE = [440, 0, 523, 587, 659, 0, 587, 523, 440, 0, 392, 440, 523, 0, 0, 0, 659, 0, 784, 659, 587, 0, 523, 587, 659, 0, 523, 440, 392, 440, 0, 0];
+function music(d) {
+  if (muted || !audio) return;
+  const gap = 60 / (DAY_LEN - d.t < 10 ? 176 : 132) / 2, now = audio.currentTime;
+  if (nextStep < now) nextStep = now + .05;
+  while (nextStep < now + .18) {
+    const at = nextStep - now, i = step % 32;
+    if (step % 4 === 0) tone(step % 8 === 0 ? 110 : 82, 50, .13, 'sine', .16, at);
+    if (step % 4 === 2) noise(.08, 2600, 1800, .05, at);
+    if (TUNE[i]) tone(TUNE[i], TUNE[i], gap * 1.5, 'triangle', .035, at);
+    step++; nextStep += gap;
+  }
+}
+// 끓는 솥이 많을수록 보글보글이 잦아진다
+function boil(d, dt) {
+  if (muted || !audio) return;
+  boilT -= dt;
+  if (boilT > 0) return;
+  if (d.pouring) noise(.12, 700, 1500, .06);
+  const ready = d.pots.filter(p => p.s === 'ready').length;
+  boilT = .1 + Math.random() * (ready ? .12 : .3);
+  const f = 180 + Math.random() * 260; tone(f, f * 1.8, .06, 'sine', ready ? .05 : .025);
+}
+function setMute(v) {
+  muted = v; $('mute').textContent = muted ? '소리 끔' : '소리 켬';
+  try { localStorage.setItem('gukbap-mute', muted ? '1' : '0'); ac(); master.gain.value = muted ? 0 : 1; if (muted) speechSynthesis.cancel(); } catch (e) {}
 }
 function save() { try { const { d, ...keep } = g; localStorage.setItem(SAVE, JSON.stringify(keep)); } catch (e) {} }
 function load() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch (e) { return null; } }
@@ -339,21 +467,13 @@ const on = (id, f) => { $(id).onclick = () => { beep(520); f(); }; };
 
 function title() {
   const old = load();
-  show(`<h2>옆집을 이겨라</h2><h1>국밥 전쟁</h1>
+  show(`<h2>옆집을 이겨라</h2><h1>국밥 전쟁</h1><canvas id="hero" width="560" height="300"></canvas>
     <p>손님은 셋 중 하나를 봐요.\n<b>가격, 속도, 맛.</b>\n\n국밥을 제때 내고, 옆집 손님을 끌어오고, 현수막을 찢어서 왕사장을 이기세요.</p>
     <button class="main" id="go">${old ? '새로 시작' : '개업하기'}</button>${old ? '<button class="buy" id="cont">이어서 하기</button>' : ''}`, () => {
-    on('go', () => { clearSave(); g = newGame(); snapshot(g); howto(); });
+    on('go', () => { clearSave(); g = newGame(); snapshot(g); intro(); });
     if (old) on('cont', () => { g = old; morning(); });
+    const c = $('hero').getContext('2d'); drawGukbap(c, 190, 190, 120); drawFace(c, 440, 130, 90, 'smug');
   });
-}
-function howto() {
-  show(`<h2>장사하며 싸우는 법</h2><h1>왕사장과 맞붙기</h1>
-    <div class="row"><header><b>솥 누르기</b></header><div class="note">다 끓으면 솥이 노랗게 빛나며 "다 됐다!"가 떠요. 눌렀다 떼면 국밥이 나가요. 누른 채 좌우로 문지르면 고기를 썰어 값이 올라가지만, 오래 썰면 식어요.</div></div>
-    <div class="row"><header><b>손님 끌어오기</b></header><div class="note">옆집 줄의 손님을 손가락으로 끌어 왼쪽 우리집에 놓아요. 왕사장이 "!"를 띄우고 노려보면 벌금이에요.</div></div>
-    <div class="row"><header><b>현수막 연타</b></header><div class="note">옆집 현수막이 걸리면 눌러서 찢어요. 찢으면 손님이 우리 쪽으로 쏠려요.</div></div>
-    <div class="row"><header><b>왕사장 쫓아내기</b></header><div class="note">우리 쪽으로 건너오면 도착하기 전에 눌러요. 그동안 옆집 문은 비어 있어요.</div></div>
-    <div class="row"><header><b>뚝배기 던지기</b></header><div class="note">뚝배기 버튼을 왕사장 쪽으로 튕겨요. 맞으면 5초 동안 자빠져서 손님을 맘껏 뺏어요. 하루 3개, 빗나가면 그릇값 1,000원이에요.</div></div>
-    <button class="main" id="go">알겠어요</button>`, () => on('go', intro));
 }
 function intro() {
   const ch = CHAPTERS[g.ch];
@@ -393,21 +513,24 @@ function openShop() {
     b.onpointermove = e => {
       if (lastX === null || !g.d) return;
       rub += Math.abs(e.clientX - lastX); lastX = e.clientX;
-      while (rub >= CUT_PX) { rub -= CUT_PX; if (chop(g, i)) beep(1200, .03, 'square', .03); }
+      while (rub >= CUT_PX) { rub -= CUT_PX; if (chop(g, i)) sfx.chop(); }
     };
     b.onpointerup = b.onpointercancel = () => {
       if (lastX === null || !g.d) return;
       lastX = null;
-      const good = tapPot(g, i); if (good !== null) beep(good ? 880 : 440, .1);
+      const good = tapPot(g, i); 
     };
     box.appendChild(b);
   });
   box.style.gridTemplateColumns = `repeat(${Math.max(g.pots, 3)}, 1fr)`;
-  $('myName').textContent = '우리집'; $('rvName').textContent = '왕대박국밥';
+  $('myName').textContent = LOOK[g.ch].me; $('rvName').textContent = LOOK[g.ch].rv;
   sheet.hidden = true; last = performance.now();
+  if (g.ch === 0 && g.day === 0 && !g.tutDone) tutStart();
 }
 function dayOver() {
   const res = endDay(g), d = res;
+  sfx.gong();
+  if (d.me >= d.rv) setTimeout(sfx.win, 500); else setTimeout(sfx.laugh, 500);
   const line = d.me >= d.rv ? '오늘은 우리가 이겼어요!' : '"오늘 장사 잘되셨나? 하하하!"';
   const table = `<table><tr><th></th><th>우리집</th><th>옆집</th></tr>
     <tr><td>손님</td><td>${d.servedMe}명</td><td>${d.servedRv}명</td></tr><tr><td>매출</td><td>${won(d.me)}</td><td>${won(d.rv)}</td></tr></table>
@@ -430,7 +553,86 @@ function ending(a, b) {
   go(0);
 }
 
+/* 첫날 튜토리얼: 시간을 세워 두고 손가락으로 하나씩 따라 하게 한다 */
+const TUT = [
+  { text: '솥이 빛나면 다 된 거예요! 눌러서 국밥을 내세요', start(d) { d.tutShop = 0; d.pots[0].s = 'ready'; d.pots[0].age = 0; }, done: d => d.served[0] > 0,
+    finger(d) { const r = rel($('pots').children[0]); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
+  { text: '육수가 줄면 밍밍해요! 눌러서 초록 칸까지 채우세요', start(d) { d.broth = 20; }, done: d => d.broth >= BROTH_LOW + 5 && d.broth <= BROTH_HIGH && !d.pouring,
+    finger(d) { const r = rel($('pour')); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
+  { text: '옆집 손님을 끌어서 우리 집에 놓으세요', start(d) { d.tutShop = 1; }, done: d => d.stolen > 0,
+    finger(d) { const c = queue(d, 1)[0], r = rel($('cv')); return c ? [r.x + c.px * r.w, r.y + c.py * r.h, r.x + r.w * .25, r.y + r.h * .62] : null; } },
+  { text: '현수막이 걸렸어요! 연타해서 찢으세요', start(d) { d.banner = { a: BANNERS[1][0], b: BANNERS[1][1], t: 99, hp: 4 }; }, done: d => !d.banner,
+    finger(d) { const r = rel($('cv')); return [r.x + r.w * .75, r.y + r.h * .35, r.x + r.w * .75, r.y + r.h * .35]; } },
+  { text: '왕사장이 와요! 뚝배기를 위로 튕겨 맞히세요', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
+    finger(d) { if (d.bowls <= 0) d.bowls = 3; const b = rel($('aBowl')), r = rel($('cv')); return [b.x + b.w / 2, b.y + b.h / 2, r.x + r.w * .7, r.y + r.h * .62]; } },
+];
+let tut = -1;
+function rel(el) { const a = $('app').getBoundingClientRect(), b = el.getBoundingClientRect(); return { x: b.left - a.left, y: b.top - a.top, w: b.width, h: b.height }; }
+function tutStart() { g.d.tut = true; tut = -1; tutNext(); $('hint').hidden = false; $('finger').hidden = false; }
+function tutNext() {
+  tut++;
+  if (tut >= TUT.length) return tutEnd();
+  TUT[tut].start(g.d); $('hintText').textContent = TUT[tut].text;
+  if (tut) sfx.win();
+}
+function tutEnd() {
+  const d = g.d; g.tutDone = true; tut = -1;
+  Object.assign(d, { tut: false, tutShop: undefined, broth: 70, pouring: false, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
+  $('hint').hidden = true; $('finger').hidden = true;
+  bubbles.push({ x: .5, y: .5, text: '연습 끝! 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
+}
+function tutTick() {
+  const d = g.d; if (!d.tut || tut < 0) return;
+  if (TUT[tut].done(d)) return tutNext();
+  const p = TUT[tut].finger(d), f = $('finger'); f.hidden = !p; if (!p) return;
+  const k = (Math.sin(performance.now() / 350) + 1) / 2;
+  f.style.left = p[0] + (p[2] - p[0]) * k + 'px'; f.style.top = p[1] + (p[3] - p[1]) * k + 'px';
+}
+
 /* 거리 그리기 */
+const LOOK = [
+  { me: '우리 포장마차', rv: '왕대박 포장마차', road: '#39465c', line: '#4a5a73', wall: '#f0873a', wall2: '#de6f27', pat: 'tarp' },
+  { me: '우리 국밥', rv: '왕대박 시장점', road: '#8b8578', line: '#77736a', wall: '#efe9d8', wall2: '#c9dfd7', pat: 'tile' },
+  { me: '우리 국밥', rv: '왕대박 대학점', road: '#7a8a8f', line: '#6a7a7f', wall: '#b4553f', wall2: '#8f3f2e', pat: 'brick' },
+  { me: '우리 국밥', rv: '왕대박 오피스점', road: '#5f6b70', line: '#505b60', wall: '#b9d3df', wall2: '#7fa3b5', pat: 'glass' },
+  { me: '우리 국밥 본점', rv: '왕대박 본점', road: '#2a2326', line: '#3b3236', wall: '#2b2a33', wall2: '#c9a24a', pat: 'gold' },
+];
+function drawGukbap(c, x, y, r) {
+  c.fillStyle = '#3b2318'; c.beginPath(); c.arc(x, y, r, 0, Math.PI); c.fill();
+  c.beginPath(); c.ellipse(x, y, r, r * .5, 0, 0, 7); c.fill();
+  c.fillStyle = '#fff3d4'; c.beginPath(); c.ellipse(x, y, r * .86, r * .4, 0, 0, 7); c.fill();
+  c.fillStyle = '#b7795a'; [[-.35, -.05], [.3, .1], [.05, -.15]].forEach(([a, b]) => { c.beginPath(); c.ellipse(x + a * r, y + b * r, r * .2, r * .09, .3, 0, 7); c.fill(); });
+  c.fillStyle = '#c8321e'; c.beginPath(); c.arc(x + r * .4, y - r * .12, r * .09, 0, 7); c.fill();
+  c.fillStyle = '#5aa84f'; [[-.1, .15], [-.5, .1], [.55, .03], [.15, .2]].forEach(([a, b]) => c.fillRect(x + a * r, y + b * r, r * .08, r * .05));
+  c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = Math.max(2, r * .05); c.lineCap = 'round';
+  [-.35, 0, .35].forEach(a => { c.beginPath(); c.moveTo(x + a * r, y - r * .55); c.quadraticCurveTo(x + (a + .15) * r, y - r * .8, x + a * r, y - r * 1.05); c.stroke(); });
+}
+// 왕사장 얼굴: 머리띠와 콧수염이 표시이고 눈썹과 입으로 표정을 낸다
+function drawFace(c, x, y, r, mood) {
+  c.fillStyle = '#e8b98e'; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+  c.fillStyle = '#2b1a14'; c.beginPath(); c.arc(x, y - r * .25, r, Math.PI, 0); c.fill();
+  c.fillStyle = '#d8321e'; c.fillRect(x - r, y - r * .42, r * 2, r * .36);
+  c.fillStyle = '#fff27a'; c.font = `${r * .32}px "Black Han Sans", sans-serif`; c.textAlign = 'center'; c.fillText('왕', x, y - r * .13);
+  const ko = mood === 'ko', ey = y + r * .18, lx = x - r * .4, rx = x + r * .4, ink = '#15342f';
+  c.strokeStyle = ink; c.fillStyle = mood === 'angry' ? '#d8321e' : ink; c.lineWidth = r * .1; c.lineCap = 'round';
+  if (ko) [lx, rx].forEach(e => { c.beginPath(); c.moveTo(e - r * .14, ey - r * .14); c.lineTo(e + r * .14, ey + r * .14); c.moveTo(e + r * .14, ey - r * .14); c.lineTo(e - r * .14, ey + r * .14); c.stroke(); });
+  else [lx, rx].forEach(e => { c.beginPath(); c.arc(e, ey, r * (mood === 'warn' ? .15 : .1), 0, 7); c.fill(); });
+  const slant = { angry: .2, laugh: -.1, smug: .06, grin: .1, warn: -.2 }[mood] || 0;
+  if (!ko) { c.beginPath(); c.moveTo(lx - r * .2, ey - r * .25 - slant * r); c.lineTo(lx + r * .2, ey - r * .25 + slant * r); c.moveTo(rx + r * .2, ey - r * .25 - slant * r); c.lineTo(rx - r * .2, ey - r * .25 + slant * r); c.stroke(); }
+  c.fillStyle = '#2b1a14'; c.beginPath(); c.ellipse(x - r * .24, y + r * .5, r * .26, r * .08, -.2, 0, 7); c.ellipse(x + r * .24, y + r * .5, r * .26, r * .08, .2, 0, 7); c.fill();
+  c.fillStyle = '#5a1712'; c.beginPath();
+  if (mood === 'laugh' || ko || mood === 'warn') c.ellipse(x, y + r * .72, r * .26, r * .18, 0, 0, 7); else c.arc(x, y + r * .64, r * .2, 0, Math.PI);
+  c.fill();
+}
+let closeup = null, pops = [];
+function drawCloseup() {
+  if (!closeup) return;
+  closeup.t -= 1 / 60; if (closeup.t <= 0) { closeup = null; return; }
+  const r = Math.min(W, H) * .24, sh = Math.sin(performance.now() / 25) * closeup.t * 9;
+  ctx.fillStyle = 'rgba(21,52,47,.55)'; ctx.fillRect(0, 0, W, H);
+  drawFace(ctx, W / 2 + sh, H * .45, r, closeup.mood);
+  text(closeup.text, W / 2, H * .45 + r * 1.6, Math.min(40, W * .1), '#ffd21f', 'Black Han Sans');
+}
 function fit() {
   const c = $('cv'), box = $('street').getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
   W = box.width; H = box.height; c.width = W * dpr; c.height = H * dpr;
@@ -439,15 +641,21 @@ function fit() {
 function text(s, x, y, size, col, font = 'Gowun Dodum', align = 'center') {
   ctx.font = `${size}px "${font}", sans-serif`; ctx.fillStyle = col; ctx.textAlign = align; ctx.fillText(s, x, y);
 }
-function shop(x, w, name, sign, ink, cloth) {
-  const h = H * .46;
-  ctx.fillStyle = '#efe9d8'; ctx.fillRect(x, 0, w, h);
+function shop(x, w, name, sign, ink, cloth, look) {
+  const h = H * .46, top = h * .42;
+  ctx.fillStyle = look.wall; ctx.fillRect(x, 0, w, h);
+  ctx.fillStyle = look.wall2;
+  if (look.pat === 'tarp') for (let i = 0; i < 6; i += 2) ctx.fillRect(x + i * w / 6, top, w / 6, h - top);
+  if (look.pat === 'tile') for (let i = 0; i < 8; i++) ctx.fillRect(x + i * w / 8, top, 1, h - top), ctx.fillRect(x, top + i * h / 14, w, 1);
+  if (look.pat === 'brick') for (let i = 0; i < 8; i++) { ctx.fillRect(x, top + i * h / 14, w, 2); for (let j = 0; j < 5; j++) ctx.fillRect(x + (j + (i % 2) * .5) * w / 4, top + i * h / 14, 2, h / 14); }
+  if (look.pat === 'glass') for (let i = 0; i < 5; i++) ctx.fillRect(x + i * w / 4 - 1, top, 3, h - top);
+  if (look.pat === 'gold') { ctx.fillRect(x, top, w, 3); ctx.fillRect(x, h - 3, w, 3); ctx.fillRect(x + 2, top, 3, h - top); ctx.fillRect(x + w - 5, top, 3, h - top); }
   for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#fff' : cloth; ctx.fillRect(x + i * w / 6, h * .3, w / 6, h * .12); }
   ctx.fillStyle = sign; ctx.fillRect(x, 0, w, h * .3);
-  text(name, x + w / 2, h * .2, Math.min(w * .15, h * .15), ink, 'Black Han Sans');
+  text(name, x + w / 2, h * .2, Math.min(w * .15, h * .15, w * .92 / name.length), ink, 'Black Han Sans');
   ctx.fillStyle = '#28403b'; ctx.fillRect(x + w * .1, h * .5, w * .32, h * .5);
   ctx.fillStyle = '#ffe9a0'; ctx.fillRect(x + w * .52, h * .5, w * .38, h * .3);
-  ctx.fillStyle = '#4a2c21'; ctx.beginPath(); ctx.arc(x + w * .71, h * .8, w * .09, Math.PI, 0); ctx.fill();
+  drawGukbap(ctx, x + w * .71, h * .68, w * .11);
 }
 function person(c) {
   const t = TYPES[c.type], x = c.px * W, y = c.py * H, r = Math.min(W, H) * .028, swing = c.st === 'queue' ? 0 : Math.sin(performance.now() / 90 + c.id * 9) * 2;
@@ -469,10 +677,11 @@ function bubble(b) {
 }
 function draw() {
   if (!ctx) return; const d = g && g.d;
-  ctx.fillStyle = '#7f9c96'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#6d8a84'; for (let i = 0; i < 7; i++) ctx.fillRect(0, H * (.5 + i * .08), W, 1);
-  shop(4, W * .5 - 7, '우리집', '#ffd21f', '#c3200f', '#2f7f73');
-  shop(W * .5 + 3, W * .5 - 7, '왕대박국밥', '#d8321e', '#fff27a', '#15342f');
+  const look = LOOK[g ? Math.min(g.ch, LOOK.length - 1) : 0];
+  ctx.fillStyle = look.road; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = look.line; for (let i = 0; i < 7; i++) ctx.fillRect(0, H * (.5 + i * .08), W, 1);
+  shop(4, W * .5 - 7, look.me, '#ffd21f', '#c3200f', '#2f7f73', look);
+  shop(W * .5 + 3, W * .5 - 7, look.rv, '#d8321e', '#fff27a', '#15342f', look);
   ctx.fillStyle = '#efe9d8'; if (Math.random() < .25) steam.push({ x: W * .25 + (Math.random() - .5) * 20, y: H * .36, t: 1 }, { x: W * .78 + (Math.random() - .5) * 20, y: H * .36, t: 1 });
   steam = steam.filter(s => (s.t -= .02) > 0);
   for (const s of steam) { s.y -= .6; ctx.globalAlpha = s.t * .45; ctx.beginPath(); ctx.arc(s.x, s.y, 5 + (1 - s.t) * 9, 0, 7); ctx.fill(); }
@@ -482,8 +691,8 @@ function draw() {
   if (d.banner) {
     ctx.fillStyle = '#fff'; ctx.fillRect(W * .52, H * .3, W * .46, H * .085);
     ctx.font = `13px "Black Han Sans", sans-serif`;
-    const s = BANNERS[d.banner.i][0]; text(s, W * .75, H * .35, Math.min(14, W * .46 / s.length * 1.35), '#d8321e', 'Black Han Sans');
-    ctx.fillStyle = '#d8321e'; ctx.fillRect(W * .52, H * .375, W * .46 * d.banner.hp / 6, 4);
+    const s = d.banner.a; text(s, W * .75, H * .35, Math.min(14, W * .46 / s.length * 1.35), '#d8321e', 'Black Han Sans');
+    ctx.fillStyle = '#d8321e'; ctx.fillRect(W * .52, H * .375, W * .46 * Math.min(1, d.banner.hp / 6), 4);
   }
   drawBoss(d);
   drawBowl(d);
@@ -496,25 +705,33 @@ function draw() {
     if (c.px === undefined) { c.px = c.x; c.py = c.y; }
   }
   d.people.slice().sort((a, b) => a.py - b.py).forEach(person);
+  pops = pops.filter(p => (p.t -= 1 / 60) > 0);
+  for (const p of pops) drawGukbap(ctx, p.x * W, p.y * H - (1.2 - p.t) * 26, Math.min(W, H) * .05);
   bubbles = bubbles.filter(b => (b.t -= 1 / 60) > 0); bubbles.forEach(bubble);
+  drawCloseup();
 }
 // 왕사장: 문 앞에서 등을 돌리거나 노려보고, 쳐들어올 때는 길을 건넌다
 function drawBoss(d) {
-  const raid = d.raid, x = (raid ? raid.x : .63) * W, y = (raid ? .5 : .47) * H, r = Math.min(W, H) * .036, b = d.boss;
-  ctx.fillStyle = '#fff'; ctx.fillRect(x - r, y - r, r * 2, r * 2.4);
-  ctx.fillStyle = '#d8321e'; ctx.fillRect(x - r, y + r * .2, r * 2, r * .35);
-  ctx.fillStyle = '#e8b98e'; ctx.beginPath(); ctx.arc(x, y - r * 1.8, r, 0, 7); ctx.fill();
-  ctx.fillStyle = '#2b1a14'; ctx.beginPath(); ctx.arc(x, y - r * 2.1, r, Math.PI, 0); ctx.fill();
+  const raid = d.raid, b = d.boss, x = (raid ? raid.x : BOSS_DOOR) * W, y = (raid ? .5 : .47) * H, r = Math.min(W, H) * .05;
   if (b.s === 'stun') {
-    ctx.fillStyle = '#c9d2d1'; ctx.fillRect(x - r * 1.8, y + r * .4, r * 3.6, r);
-    text('꽈당!', x, y - r * 3.2, 20, '#fff27a', 'Black Han Sans'); return;
+    ctx.save(); ctx.translate(x, y + r); ctx.rotate(-1.4);
+    ctx.fillStyle = '#fff'; ctx.fillRect(-r, -r, r * 2, r * 2.2); drawFace(ctx, 0, -r * 1.8, r, 'ko'); ctx.restore();
+    const spin = performance.now() / 200;
+    for (let i = 0; i < 3; i++) text('★', x + r * 1.8 + Math.cos(spin + i * 2.1) * r, y - r * .2 + Math.sin(spin + i * 2.1) * r * .4, 16, '#ffd21f');
+    text('5초 기회!', x, y - r * 1.6, 15, '#fff27a', 'Black Han Sans'); return;
   }
-  if (b.s === 'away' && !raid) { ctx.beginPath(); ctx.arc(x, y - r * 1.8, r, 0, 7); ctx.fill(); return; }
-  ctx.fillStyle = b.s === 'watch' ? '#d8321e' : '#15342f';
-  ctx.fillRect(x - r * .55, y - r * 1.9, r * .35, r * .3); ctx.fillRect(x + r * .2, y - r * 1.9, r * .35, r * .3);
-  if (b.s === 'warn') text('!', x, y - r * 3.2, 26, '#ffd21f', 'Black Han Sans');
-  if (b.s === 'watch') text('노려봄', x, y - r * 3.2, 15, '#ffd21f', 'Black Han Sans');
-  if (raid) text('눌러서 쫓기', x, y - r * 3.2, 14, '#fff27a', 'Black Han Sans');
+  ctx.fillStyle = '#fff'; ctx.fillRect(x - r, y - r * .9, r * 2, r * 2.1);
+  ctx.fillStyle = '#d8321e'; ctx.fillRect(x - r, y + r * .2, r * 2, r * .3);
+  if (b.s === 'away' && !raid) {
+    ctx.fillStyle = '#2b1a14'; ctx.beginPath(); ctx.arc(x, y - r * 1.7, r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#d8321e'; ctx.fillRect(x - r, y - r * 2, r * 2, r * .32); ctx.fillRect(x + r * .2, y - r * 1.75, r * .25, r * .7);
+    return;
+  }
+  drawFace(ctx, x, y - r * 1.7, r, raid ? 'grin' : b.s === 'watch' ? 'angry' : 'warn');
+  if (d.sales[0] > d.sales[1] * 1.3) { ctx.fillStyle = '#7fd1ff'; ctx.beginPath(); ctx.arc(x + r * 1.1, y - r * 2, r * .18, 0, 7); ctx.fill(); }
+  if (b.s === 'warn') text('!', x, y - r * 3, 28, '#ffd21f', 'Black Han Sans');
+  if (b.s === 'watch') text('노려봄', x, y - r * 3, 15, '#ffd21f', 'Black Han Sans');
+  if (raid) text('눌러서 쫓기', x, y - r * 3, 14, '#fff27a', 'Black Han Sans');
 }
 const bannerBox = () => [.52, .3, .46, .085];
 let heldC = null;
@@ -523,19 +740,19 @@ $('cv').addEventListener('pointerdown', e => {
   const d = g && g.d; if (!d) return;
   e.preventDefault();
   const [x, y] = pointAt(e), big = 44 / Math.min(W, H);
-  if (d.raid && Math.hypot((x - d.raid.x) * W, (y - .47) * H) < 56) { shoo(g); beep(240, .12); return; }
+  if (d.raid && Math.hypot((x - d.raid.x) * W, (y - .47) * H) < 56) { shoo(g); sfx.shoo(); return; }
   const [bx, by, bw, bh] = bannerBox();
-  if (d.banner && x > bx && x < bx + bw && y > by - .02 && y < by + bh + .02) { tear(g); beep(140 + d.banner?.hp * 20 || 500, .05, 'sawtooth'); return; }
+  if (d.banner && x > bx && x < bx + bw && y > by - .02 && y < by + bh + .02) { const had = d.banner; tear(g); if (d.banner === had) sfx.rip(); else sfx.ripped(); return; }
   let best = null, gap = 48;
   for (const c of queue(d, 1)) { const far = Math.hypot((c.px - x) * W, (c.py - y) * H); if (far < gap) { gap = far; best = c; } }
-  if (best && grab(g, best)) { heldC = best; $('cv').setPointerCapture(e.pointerId); }
+  if (best && grab(g, best)) { sfx.pop(); heldC = best; $('cv').setPointerCapture(e.pointerId); }
 });
 $('cv').addEventListener('pointermove', e => {
   if (!heldC || heldC.st !== 'held') return;
   const [x, y] = pointAt(e); heldC.x = heldC.px = x; heldC.y = heldC.py = y;
 });
 const release = e => {
-  if (heldC && g && g.d) { const [x, y] = pointAt(e); if (drop(g, heldC, Math.min(.98, Math.max(.02, x)), Math.min(.98, Math.max(.5, y)))) beep(880, .12, 'triangle'); }
+  if (heldC && g && g.d) { const [x, y] = pointAt(e); if (drop(g, heldC, Math.min(.98, Math.max(.02, x)), Math.min(.98, Math.max(.5, y)))) sfx.pop(); }
   heldC = null;
 };
 $('cv').addEventListener('pointerup', release); $('cv').addEventListener('pointercancel', release);
@@ -557,7 +774,7 @@ $('aBowl').addEventListener('pointermove', e => {
 const flick = () => {
   if (aim && g && g.d) {
     if (aim.x === null) g.d.ev.push({ k: 'say', shop: 0, text: '위로 튕겨서 던져요' });
-    else if (throwBowl(g, aim.x)) beep(500, .08, 'triangle');
+    else if (throwBowl(g, aim.x)) sfx.whoosh();
   }
   aim = null;
 };
@@ -577,13 +794,16 @@ function drawBowl(d) {
 function events() {
   const d = g.d;
   for (const e of d.ev.splice(0)) {
-    if (e.k === 'ding') { beep(988, .09, 'triangle', .1); setTimeout(() => beep(1319, .14, 'triangle', .1), 90); try { navigator.vibrate && navigator.vibrate(40); } catch (err) {} }
-    if (e.k === 'warn') beep(330, .12, 'square');
-    if (e.k === 'hit') { beep(90, .3, 'square', .09); bubbles.push({ x: e.x, y: .4, text: '명중! 왕사장 꽈당!', t: 1.8, col: '#fff27a' }); }
-    if (e.k === 'miss') { beep(1500, .2, 'sawtooth', .05); bubbles.push({ x: e.x, y: .42, text: '쨍그랑! 그릇값 -1,000원', t: 1.5 }); }
-    if (e.k === 'bust') { beep(120, .35, 'sawtooth', .08); heldC = null; }
-    if (e.k === 'banner') beep(180, .25, 'sawtooth');
+    if (e.k === 'ding') { sfx.ding(); try { navigator.userActivation?.hasBeenActive && navigator.vibrate && navigator.vibrate(40); } catch (err) {} }
+    if (e.k === 'warn') sfx.warn();
+    if (e.k === 'broth') { sfx.warn(); bubbles.push({ x: .25, y: .42, text: e.text, t: 2 }); }
+    if (e.k === 'hit') { sfx.ring(); sfx.ouch(); closeup = { mood: 'ko', text: '꽈당!', t: .9 }; bubbles.push({ x: e.x, y: .4, text: '명중! 왕사장 꽈당!', t: 1.8, col: '#fff27a' }); }
+    if (e.k === 'miss') { sfx.shatter(); bubbles.push({ x: e.x, y: .42, text: '쨍그랑! 그릇값 -1,000원', t: 1.5 }); }
+    if (e.k === 'bust') { sfx.siren(); setTimeout(sfx.laugh, 700); heldC = null; closeup = { mood: 'laugh', text: '벌금 12,000원!', t: 1 }; }
+    if (e.k === 'banner') sfx.laugh();
+    if (e.k === 'say' && e.shop === 1) voice(e.text, .55, 1.15);
     if (e.k === 'say') bubbles.push(e.at ? { x: e.at.x, y: e.at.y - .08, text: e.text, t: 1.6 } : { x: e.shop ? .75 : .25, y: e.shop ? .27 : .42, text: e.text, t: 2.2, col: e.shop ? '#ffd9d3' : '#fff' });
+    if (e.k === 'serve') { pops.push({ x: e.at.x, y: (e.at.py || .6) - .03, t: 1.2 }); sfx.coin(); e.good ? sfx.kya() : sfx.cold(); }
     if (e.k === 'serve') bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .07, text: e.cuts >= 3 ? `고기 듬뿍! +${e.pay.toLocaleString('ko-KR')}` : e.good ? `캬~ +${e.pay.toLocaleString('ko-KR')}` : '식었네...', t: 1.2, col: e.good ? '#fff27a' : '#fff' });
   }
 }
@@ -600,22 +820,33 @@ function hud() {
   });
   const done = d.pots.some(p => p.s === 'ready'), cue = $('cue');
   cue.className = done ? 'go' : '';
-  cue.textContent = !done ? '솥이 끓으면 노랗게 빛나요' : queue(d, 0).length ? '국밥 완성! 빛나는 솥을 누르세요' : '국밥 완성! 손님을 끌어오세요';
+  const bad = brothState(d);
+  cue.className = done || bad !== 'ok' ? 'go' : '';
+  cue.textContent = bad === 'thin' ? '국물이 밍밍해요! 육수를 부으세요' : bad === 'salty' ? '너무 짜요! 그만 부으세요' : !done ? '솥이 끓으면 노랗게 빛나요' : queue(d, 0).length ? '국밥 완성! 빛나는 솥을 누르세요' : '국밥 완성! 손님을 끌어오세요';
   $('aCall').disabled = d.cd.call > 0;
   $('aRice').disabled = d.cd.rice > 0;
+  $('brothIn').style.width = d.broth + '%'; $('brothIn').style.background = brothState(d) === 'ok' ? '#fff3d4' : '#ff7a59';
   $('bowlN').textContent = d.bowls; $('aBowl').disabled = d.bowls <= 0;
 }
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (g && g.d) {
     stepDay(g, dt); events(); hud();
+    if (!document.hidden) { music(g.d); boil(g.d, dt); }
+    tutTick();
     if (g.d.over) dayOver();
   }
   draw(); requestAnimationFrame(loop);
 }
 [['aCall', 'call'], ['aRice', 'rice']].forEach(([id, a]) => {
-  $(id).onclick = () => { if (g && g.d && useAct(g, a)) beep(300, .1); };
+  $(id).onclick = () => { if (g && g.d && useAct(g, a)) sfx[a](); };
 });
+const pourBtn = $('pour'), pourSet = on => { if (g && g.d) g.d.pouring = on; pourBtn.classList.toggle('on', on); };
+pourBtn.addEventListener('pointerdown', e => { e.preventDefault(); pourBtn.setPointerCapture(e.pointerId); pourSet(true); ac(); });
+pourBtn.addEventListener('pointerup', () => pourSet(false)); pourBtn.addEventListener('pointercancel', () => pourSet(false));
+$('tutSkip').onclick = tutEnd;
+$('mute').onclick = () => setMute(!muted);
+$('mute').textContent = muted ? '소리 끔' : '소리 켬';
 addEventListener('resize', fit);
 fit(); title(); requestAnimationFrame(loop);
 </script>
