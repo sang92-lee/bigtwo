@@ -92,6 +92,7 @@ body{background:var(--bg)}h1{font-size:28px}
 #mybar{position:absolute;left:8px;right:8px;bottom:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;z-index:8}#mybar:empty{display:none}.g{background:#f5eee2ee;border-radius:10px;padding:3px 8px;font-size:12px;line-height:1.2}.g b{font-weight:400}.g i{display:block;height:9px;background:#d8cbb8;border-radius:6px;overflow:hidden;margin:2px 0}.g u{display:block;height:100%;border-radius:6px;transition:width .4s}.g em{font-style:normal;font-size:10px;color:#7a6a5c}
 </style></head><body><div id="stage"><div id="hud"></div><div id="mybar"></div></div><div id="app"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script>
 const NAMES=['나','곰돌','여우','토끼','부엉','돼지','고양','오리'],COL=['#f2b632','#b58a5f','#e8743b','#d98cb3','#7f8fd0','#e39aa0','#8fbf9a','#6fc0d8'];
 const FOOD=[{n:'굶기',c:0,h:0},{n:'물 한 병',c:150,h:8},{n:'밥 한 끼',c:600,h:25},{n:'치킨',c:2000,h:50,sneak:1},{n:'초콜릿',c:80,h:4,p:'bowl'},{n:'커피',c:200,h:6,p:'water'},{n:'라면',c:350,h:15,p:'bowl'},{n:'김밥',c:450,h:20,p:'bowl'},{n:'소주',c:500,h:5,p:'bottle',calm:1},{n:'삼겹살',c:1200,h:35,p:'chicken'},{n:'초밥',c:1600,h:40,p:'bowl'},{n:'한우',c:5000,h:80,p:'chicken',sneak:1}];
@@ -123,7 +124,7 @@ function face(c,sad,f){return `<svg width="34" height="34" viewBox="0 0 32 32"><
 function grid(tap){return `<div class="ppl">${P.map(p=>{const t=tap&&p.on&&p.i&&(!tap.length||tap.includes(p))?`data-v="${p.i}"`:'';return `<button class="p ${p.on&&p.ally?'al':''} ${p.i?'':'me'} ${p.on?'':'out'}" ${t}>${face(COL[p.i],['굶주림','화남','불안','위축'].includes(p.f),p.f)}${p.n}<div style="font-weight:700;color:${FC[p.f]||'#66727a'}">${p.on?p.f:'퇴장'}</div><div class="hp"><i style="width:${p.hp}%"></i></div><div class="hate">${p.hate?'미움 '+p.hate:''}${p.like>0?' 호감 '+p.like:''}${p.on&&p.ally?`<b style="color:#2f6f5e"> 동맹 ${p.trust}%</b>`:''}${p.on&&p.camp&&p.seen?'<b style="color:#5d4a94"> 수상</b>':''}</div></button>`}).join('')}</div>`}
 function home(){$.innerHTML=`<h1>방 안의 8명,<br>상금 4억 8천만원</h1><p class="sub">14일을 버티면 남은 상금을 살아남은 사람끼리 나눕니다.<br>밤마다 각자 방에서 몰래 사 먹을 수 있지만, 그 돈은 상금에서 빠집니다.<br>아침이면 누가 썼는지 의심이 시작되고, 3일마다 투표로 쫓겨납니다.</p>
 <div class="ppl" style="margin-top:10px">${COL.map((c,i)=>`<div class="p">${face(c)}${NAMES[i]}</div>`).join('')}</div>
-<div class="menu" style="grid-template-columns:1fr"><button class="main" id="go">방에 들어가기</button><button id="toShop" style="text-align:center"><b>옷가게 · 금고 ${man(bag().money)}</b></button><p class="sub" style="text-align:center">가상의 돈으로 하는 게임입니다${best()?` · 최고 ${man(best())}`:''}</p></div>`;go.onclick=start;toShop.onclick=shop}
+<div class="menu" style="grid-template-columns:1fr"><button class="main" id="go">방에 들어가기</button><button class="main" id="toMp" style="background:#3f8f78;box-shadow:none">친구랑 하기</button><button id="toShop" style="text-align:center"><b>옷가게 · 금고 ${man(bag().money)}</b></button><p class="sub" style="text-align:center">가상의 돈으로 하는 게임입니다${best()?` · 최고 ${man(best())}`:''}</p></div>`;go.onclick=start;toShop.onclick=shop;toMp.onclick=()=>mpLobby()}
 function A3reset(){if(window.stageReset)stageReset()}
 const ITEMS=[{id:'ribbon',n:'리본',p:3000,s:'head'},{id:'scarf',n:'목도리',p:5000,s:'neck'},{id:'glasses',n:'선글라스',p:8000,s:'face'},{id:'hat',n:'밀짚모자',p:12000,s:'head'},{id:'cape',n:'망토',p:20000,s:'back'},{id:'crown',n:'왕관',p:50000,s:'head'}];
 function bag(){try{return Object.assign({money:0,own:[],eq:{}},JSON.parse(localStorage.getItem('roomBag')||'{}'))}catch(e){return{money:0,own:[],eq:{}}}}
@@ -358,5 +359,65 @@ setInterval(()=>{if(!AC||mute||document.hidden)return;const sc=[262,294,330,392,
  buy=wrap(buy,(p,f)=>{if(!p.i&&f.c)SND.coin()});vote=wrap(vote,SND.vote);draw=wrap(draw,SND.morning);next=wrap(next,SND.night);revote=wrap(revote,SND.vote);
  end=wrap(end,x=>x?SND.lose():SND.win());const _t=tally;tally=(m,pl)=>{const n=live().length;_t(m,pl);if(live().length<n&&P[0].on)SND.out()};
  if(window.stageBuzz){const _b=stageBuzz;window.stageBuzz=()=>{SND.buzz();_b()}}}
-home();
+// 친구랑 하기: 방장 브라우저가 서버 역할을 한다 (PeerJS)
+let S=null,Mp=null,V=null;const MACT=ACT.filter(a=>a.k!='ally'),rnd8=()=>Math.random();
+function mpLobby(code){const nm=(()=>{try{return localStorage.getItem('roomName')||''}catch(e){return ''}})();
+ $.innerHTML=`<h1>친구랑 하기</h1><p class="sub">2~8명. 빈자리는 동물 봇이 채웁니다. 방장이 화면을 끄면 게임이 끊겨요.</p>
+ <input id="mn" maxlength="6" placeholder="내 이름" value="${nm}" style="font:inherit;padding:12px;border-radius:12px;border:0;width:100%">
+ ${code?`<button class="main" id="jn">방 ${code} 들어가기</button>`:`<button class="main" id="mk">방 만들기</button><input id="mc" maxlength="4" inputmode="numeric" placeholder="친구의 방 코드 4자리" style="font:inherit;padding:12px;border-radius:12px;border:0;width:100%"><button class="main" id="jn">코드로 들어가기</button>`}
+ <div class="menu" style="grid-template-columns:1fr"><button id="bk" style="text-align:center">돌아가기</button></div><p class="sub" id="st"></p>`;
+ const name=()=>{const n=mn.value.trim()||'친구';try{localStorage.setItem('roomName',n)}catch(e){}return n};
+ bk.onclick=()=>location.href=location.pathname;jn.onclick=()=>{const c=code||mc.value.trim();if(c.length==4)mpJoin(c,name())};if(!code)mk.onclick=()=>mpHost(name())}
+function mpHost(n){const code=String(1000+Math.floor(Math.random()*9000));st.textContent='방 만드는 중...';const peer=new Peer('moneyroom8-'+code);
+ Mp={host:true,code,peer,conns:{},names:[n],me:0};
+ peer.on('open',()=>mpWait());peer.on('error',e=>{st.textContent='연결 실패: '+e.type});
+ peer.on('connection',c=>{c.on('data',d=>{if(d.t=='hi'){if(S||Mp.names.length>=8){c.send({t:'full'});return}c.idx=Mp.names.length;Mp.names.push(d.n);Mp.conns[c.idx]=c;mpSendLobby()}else mpInput(c.idx,d)});
+  c.on('close',()=>{if(c.idx==null)return;delete Mp.conns[c.idx];if(S){S.pl[c.idx].bot=true;delete S.wait[c.idx];S.msg=[S.pl[c.idx].n+'의 연결이 끊겨 봇이 대신합니다.'];mpCheck();mpPush()}})})}
+function mpSendLobby(){Object.values(Mp.conns).forEach(c=>c.send({t:'lobby',names:Mp.names}));mpWait()}
+function mpWait(names=Mp.names){const url=location.origin+location.pathname+'?r='+Mp.code;
+ $.innerHTML=`<h1>${Mp.code?'방 코드 '+Mp.code:'대기 중'}</h1><div class="log">${names.join('<br>')}</div>${Mp.host?`<div class="menu" style="grid-template-columns:1fr"><button id="cp" style="text-align:center">초대 링크 복사</button><button class="main" id="bg">${names.length}명으로 시작</button></div>`:'<p class="sub">방장이 시작하길 기다리는 중...</p>'}`;
+ if(Mp.host){cp.onclick=async()=>{try{if(navigator.share)await navigator.share({url});else{await navigator.clipboard.writeText(url);cp.textContent='복사했어요'}}catch(e){}};bg.onclick=mpStart}}
+function mpJoin(code,n){st.textContent='연결 중...';const peer=new Peer();Mp={host:false,code,peer};
+ peer.on('error',e=>{st.textContent='연결 실패. 방 코드를 확인해 주세요.'});
+ peer.on('open',()=>{const c=peer.connect('moneyroom8-'+code,{reliable:true});Mp.c=c;c.on('open',()=>c.send({t:'hi',n}));
+  c.on('data',d=>{if(d.t=='lobby')mpWait(d.names);if(d.t=='full')st.textContent='이미 시작했거나 방이 찼습니다.';if(d.t=='v')mpRender(d.v)});
+  c.on('close',()=>{$.innerHTML='<h1>연결이 끊겼습니다</h1><p class="sub">방장이 나간 것 같아요.</p><button class="main" onclick="location.href=location.pathname">처음으로</button>'})})}
+function mpSend(d){if(Mp.host)mpInput(0,d);else Mp.c.send(d)}
+function mpStart(){const pl=NAMES.map((a,i)=>({i,n:Mp.names[i]||a,hp:70,hate:0,like:{},stash:0,on:true,bot:i>=Mp.names.length,greed:rnd8()*.5,f:'평온',spent:0,pm:[]}));
+ S={pl,prize:START,day:1,ph:'act',wait:{},msg:['첫날입니다. 서로 눈치를 봅니다.'],lost:0};mpAuto();mpPush()}
+const sL=()=>S.pl.filter(p=>p.on);
+function mpAuto(){sL().filter(p=>p.bot).forEach(p=>{S.wait[p.i]=S.ph=='vote'?{v:-1}:S.ph=='act'?{a:'rest'}:{buy:[]}});mpCheck()}
+function mpCheck(){if(S.ph=='end')return;if(sL().every(p=>S.wait[p.i])){const w=S.wait;S.wait={};S.pl.forEach(p=>p.pm=[]);S.ph=='act'?mpDoAct(w):S.ph=='vote'?mpDoVote(w):mpDoNight(w);if(S.ph!='end')mpAuto()}}
+function mpInput(i,d){if(!S||!S.pl[i]||!S.pl[i].on||S.wait[i]||d.t!='pick')return;S.wait[i]=d.c;mpCheck();mpPush()}
+function mpDoAct(w){const msg=[];sL().forEach(p=>{const c=w[p.i],t=c.t!=null?S.pl[(p.i+c.t)%8]:null;
+  if(c.a=='rest')p.hp=Math.min(100,p.hp+6);if(c.a=='sorry')p.hate=Math.max(0,p.hate-2);
+  if(c.a=='gift'&&t){S.prize=Math.max(0,S.prize-150);t.hp=Math.min(100,t.hp+8);msg.push(`${p.n}가 ${t.n}에게 물을 나눠 줬습니다.`)}
+  if(c.a=='drink'&&t){S.prize=Math.max(0,S.prize-300);p.hate=Math.max(0,p.hate-1);msg.push(`${p.n}와 ${t.n}가 막걸리를 마셨습니다.`)}
+  if(c.a=='gossip'&&t){t.hate+=2;if(rnd8()<.3){p.hate+=2;msg.push(`${p.n}가 ${t.n} 뒷담화를 하다 들켰습니다!`)}else p.pm.push(`${t.n} 뒷담화가 먹혔습니다.`)}
+  if(c.a=='steal'){S.prize=Math.max(0,S.prize-1000);if(rnd8()<.3){p.hate+=5;msg.push(`${p.n}가 상금을 빼돌리다 들켰습니다!`)}else{p.stash+=1000;p.pm.push('몰래 1,000만원을 챙겼습니다.')}}});
+ S.msg=msg;if(S.day%3==0&&sL().length>2){S.ph='vote'}else S.ph='night'}
+function mpDoVote(w){const c={},L=sL();L.forEach(p=>{let t=w[p.i].v>=0?S.pl[(p.i+w[p.i].v)%8]:null;if(!t||!t.on||t==p){const o=L.filter(x=>x!=p);t=o.reduce((a,x)=>x.hate+rnd8()*2.5>a.s?{s:x.hate+rnd8()*2.5,x}:a,{s:-1}).x}c[t.i]=(c[t.i]||0)+1});
+ const top=Math.max(...Object.values(c)),ids=Object.keys(c).filter(k=>c[k]==top),o=S.pl[+ids[R(ids.length)]];o.on=false;S.msg=[`${o.n}가 ${top}표로 쫓겨났습니다.${ids.length>1?' (동점 추첨)':''}`];S.ph='night';if(sL().filter(p=>!p.bot).length==0)mpEnd()}
+function mpDoNight(w){const p0=S.prize,sp=[];sL().forEach(p=>{const b=p.bot?(p.hp<35?[2,1]:rnd8()<.45+p.greed?[[1,5,6],[2,7,8],[3,10,9]][rnd8()<.1?2:rnd8()<.4?1:0].slice(R(3),1).concat(1).slice(0,1):[]):w[p.i].buy;
+  b.forEach(k=>{const f=FOOD[k];S.prize=Math.max(0,S.prize-f.c);p.hp=Math.min(100,p.hp+f.h);p.spent+=f.c;if(f.calm)p.hate=Math.max(0,p.hate-1);sp.push([p,f.c])})});
+ S.msg=[];sp.filter(x=>x[1]>=600).forEach(([p,c])=>{if(rnd8()<(c>=2000?.55:.25)){p.hate+=c>=2000?3:1;S.msg.push(`${p.n} 방에서 ${c>=2000?'맛있는 냄새가':'밤에 소리가'} 났다는 말이 돕니다.`)}});
+ sL().forEach(p=>{p.hp-=DROP;p.f=p.hp<30?'굶주림':(p0-S.prize>=2000?'불안':'평온')});sL().filter(p=>p.hp<=0).forEach(p=>{p.on=false;S.msg.push(`${p.n}가 쓰러져 기권했습니다.`)});
+ S.lost=p0-S.prize;S.day++;if(S.day>DAYS||sL().filter(p=>!p.bot).length==0)return mpEnd();S.ph='act'}
+function mpEnd(){S.ph='end';const n=Math.max(1,sL().length);S.res=S.pl.map(p=>({n:p.n,on:p.on,take:Math.max(0,(p.on?Math.floor(S.prize/n):0)+p.stash),spent:p.spent})).sort((a,b)=>b.take-a.take)}
+function mpView(i){return{ph:S.ph,day:S.day,prize:S.prize,lost:S.lost,msg:[...S.msg,...S.pl[i].pm],done:!!S.wait[i],left:sL().filter(p=>!S.wait[p.i]).length,alive:S.pl[i].on,res:S.res,take:S.res&&S.res.find(r=>r.n==S.pl[i].n).take,
+ pl:S.pl.map((_,k)=>{const p=S.pl[(k+i)%8];return{i:k,n:p.n,hp:p.hp,hate:p.hate,on:p.on,f:p.f}})}}
+function mpPush(){Object.entries(Mp.conns).forEach(([i,c])=>c.open&&c.send({t:'v',v:mpView(+i)}));mpRender(mpView(0))}
+let mpCart=[];
+function mpRender(v){V=v;P=v.pl;prize=v.prize;day=v.day;stash=0;p0=prize+v.lost;const top=`<div class="prize"><span class="sub">${v.day}일째</span><b>${man(v.prize)}</b>${v.lost?`<span class="loss">간밤에 -${man(v.lost)}</span>`:''}</div>`;
+ const wait=`<div class="log">${v.msg.join('<br>')||' '}<br><br>${v.alive?`다른 사람 기다리는 중... (${v.left}명 남음)`:'나는 탈락했습니다. 구경하는 중...'}</div>`;
+ window.quiet=v.ph=='night'&&v.alive&&!v.done;window.stagePhase&&stagePhase(v.ph=='night'?'night':v.ph=='vote'?'vote':'');
+ if(v.ph=='end'){const me=v.take;try{if(!V.saved){const b=bag();b.money+=me;saveBag(b)}}catch(e){}$.innerHTML=`<div class="big">${man(me)}</div><p>최종 결과 · 쓴 돈까지 공개</p><div class="log">${v.res.map((r,k)=>`${k+1}. ${r.n} ${man(r.take)} · 몰래 쓴 돈 ${man(r.spent)}${r.on?'':' (탈락)'}`).join('<br>')}</div><button class="main" onclick="location.href=location.pathname">처음으로</button>`;return}
+ if(!v.alive||v.done){$.innerHTML=top+grid()+wait;return}
+ if(v.ph=='act'){$.innerHTML=top+grid()+`<div class="log">${v.msg.join('<br>')||'조용합니다.'}</div><p style="font-weight:700">오늘 뭘 할까?</p><div class="menu">${MACT.map((a,i)=>`<button data-a="${i}"><b>${a.n}</b><small>${a.d}</small></button>`).join('')}</div>`;
+  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=MACT[+b.dataset.a];if(!a.t)return mpSend({t:'pick',c:{a:a.k}});$.innerHTML=`<p style="font-weight:700;margin-top:10px">${a.n}: 누구에게?</p>${grid(true)}`;document.querySelectorAll('[data-v]').forEach(x=>x.onclick=()=>mpSend({t:'pick',c:{a:a.k,t:+x.dataset.v}}))})}
+ if(v.ph=='vote'){$.innerHTML=top+`<p style="font-weight:700;font-size:18px;color:var(--pri);text-align:center">누구를 내보낼까요?</p>${grid(true)}<div class="log">${v.msg.join('<br>')||'말로 직접 토론해 보세요!'}</div>`;document.querySelectorAll('[data-v]').forEach(x=>x.onclick=()=>mpSend({t:'pick',c:{v:+x.dataset.v}}))}
+ if(v.ph=='night'){const sum=mpCart.reduce((a,k)=>a+FOOD[k].c,0);$.innerHTML=`<div class="prize"><span class="sub">${v.day}일째 밤 · 내 방</span><b>${man(v.prize-sum)}</b></div><div class="log">${v.msg.join('<br>')||'아무도 못 봅니다.'}</div><p style="font-weight:700">체력 ${P[0].hp}${sum?` · 살 것 ${man(sum)}`:''}</p><div class="menu shop">${FOOD.map((f,i)=>[f,i]).slice(1).sort((x,y)=>x[0].c-y[0].c).map(([f,i])=>`<button data-b="${i}"><b>${f.n}</b><small>${man(f.c)}<br>체력 +${f.h}</small></button>`).join('')}<button class="main" id="zz" style="grid-column:1/-1">잠자기</button></div>`;
+  document.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{mpCart.push(+b.dataset.b);SND.coin();mpRender(V)});zz.onclick=()=>{const c=mpCart;mpCart=[];mpSend({t:'pick',c:{buy:c}})}}}
+
+const rq=new URLSearchParams(location.search).get('r');rq?mpLobby(rq):home();
 </script></body></html>
