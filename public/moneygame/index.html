@@ -178,7 +178,23 @@ function eat(){log=[];met=false;rmsg='';const me=P[0],spent=cart.map(c=>[me,c]);
   if(!me.on)return end('쓰러져 기권했습니다');
   day++;if(day>DAYS)return end();draw()}
 function after(){if(VOTE.includes(day)&&live().length>2)return vote();next()}
-function act(){$.innerHTML=`<div class="prize"><span class="sub">${day}일째 저녁</span><b>${man(prize)}</b>${p0>prize?`<span class="loss">오늘 -${man(p0-prize)}</span>`:''}</div>${grid()}<div class="log">${log.join('<br>')||'조용한 하루였습니다.'}</div><p style="font-weight:700">오늘 저녁엔 뭘 할까?</p><div class="menu">${ACT.map((a,i)=>`<button data-a="${i}"><b>${a.n}</b><small>${a.d}</small></button>`).join('')}</div>`;
+// 저녁마다 누군가 귓속말로 찾아온다. 말이 진심인지는 알 수 없다
+function whisper(){const me=P[0],L=live().slice(1),pick=a=>a[R(a.length)],free=L.filter(p=>!p.ally),allies=L.filter(p=>p.ally),hungry=L.filter(p=>p.hp<45),list=[];
+  if(L.length<2||Math.random()>.7)return false;
+  const others=w=>L.filter(p=>p!=w),left=VOTE.some(v=>v>=day);
+  const offer=w=>({who:w,text:`"우리 손잡자. 투표 때 네 편 들어 줄게."`,yes:'수락한다',no:'거절한다',a(){const fake=w.mind==5||Math.random()<.25;w.camp=0;w.ally=true;w.trust=fake?42:75;w.thx=day;log.push(`${w.n}와 동맹을 맺었습니다. 진심일까요?`)},b(){w.like-=1;if(w.mind==0){w.mad=day;log.push(`${w.n}의 표정이 굳었습니다. 기억해 둘 눈치입니다.`)}else log.push(`${w.n}가 어깨를 으쓱하고 돌아섭니다.`)}});
+  if(free.length){const w=pick(free);list.push(offer(w),offer(w))}
+  if(allies.length&&free.length){const w=pick(free),t=pick(allies);list.push({who:w,text:`"${t.n} 말이야, 너 곧 버릴걸? 우리가 먼저 치자."`,yes:'같이 친다',no:'거절한다',a(){t.hate+=3;w.like+=2;if(R(3)==0){t.ally=false;t.mad=day;log.push(`${t.n}가 눈치챘습니다! 동맹이 깨졌습니다.`)}else log.push(`${t.n}를 향한 소문이 퍼집니다. 아직 모르는 눈치입니다.`)},b(){t.trust=Math.min(100,t.trust+15);w.like-=1;log.push(`${t.n}에게 이 일이 전해졌습니다. 나를 더 믿게 됐습니다.`)}})}
+  {const w=pick(L),t=pick(others(w));list.push({who:w,text:`"${t.n}가 네가 상금 빼돌린다고 떠들고 다니던데?"`,yes:'따진다',no:'참는다',a(){t.like-=2;if(R(2)){t.hate+=1;log.push(`${t.n}가 당황합니다. 사람들이 ${t.n}를 의심합니다.`)}else{me.hate+=1;log.push(`소문은 거짓이었습니다. 괜히 큰소리만 냈습니다.`)}},b(){me.hate+=1;w.like+=1;log.push('꾹 참았습니다. 그래도 수군거림은 남습니다.')}})}
+  if(hungry.length){const w=pick(hungry);list.push({who:w,text:`"배가 너무 고파… 물 한 병만 사 줘."`,yes:'사 준다 (150만원)',no:'모른 척한다',a(){prize=Math.max(0,prize-150);w.hp=Math.min(100,w.hp+10);w.like+=3;w.thx=day;log.push(`${w.n}가 눈물을 글썽입니다.`)},b(){w.like-=1;if(w.mind==2)w.mad=day;log.push(`${w.n}가 말없이 돌아섭니다.`)}})}
+  if(left){const w=pick(L),t=pick(others(w));list.push({who:w,text:`"다음 투표 때 ${t.n} 찍자. 약속하는 거다?"`,yes:'약속한다',no:'거절한다',a(){w.promise=t.i;w.like+=2;log.push(`${w.n}와 약속했습니다. 어기면 들킵니다.`)},b(){w.like-=1;log.push(`${w.n}가 입맛을 다십니다.`)}})}
+  if(stash>0){const w=pick(L);list.push({who:w,text:`"너 요즘 주머니가 두둑해 보인다? 다 봤어."`,yes:'입막음한다 (300만원)',no:'잡아뗀다',a(){prize=Math.max(0,prize-300);w.like+=1;log.push(`${w.n}가 씩 웃고 입을 닫습니다.`)},b(){if(R(2)){me.hate+=2;log.push(`${w.n}가 사람들에게 말했습니다. 시선이 따갑습니다.`)}else log.push(`${w.n}가 떠본 것뿐이었습니다. 휴.`)}})}
+  const w=pick(list);
+  $.innerHTML=`<div class="prize"><span class="sub">${day}일째 저녁 · 누군가 다가옵니다</span><b>${w.who.n}의 귓속말</b></div>${grid()}<div class="log" style="font-size:17px">${w.text}</div><div class="menu"><button id="wY"><b>${w.yes}</b></button><button id="wN"><b>${w.no}</b></button></div>`;
+  document.getElementById('wY').onclick=()=>{w.a();act()};document.getElementById('wN').onclick=()=>{w.b();act()};
+  return true}
+function act(){if(P.asked!=day&&P[0].on){P.asked=day;if(whisper())return}
+  $.innerHTML=`<div class="prize"><span class="sub">${day}일째 저녁</span><b>${man(prize)}</b>${p0>prize?`<span class="loss">오늘 -${man(p0-prize)}</span>`:''}</div>${grid()}<div class="log">${log.join('<br>')||'조용한 하루였습니다.'}</div><p style="font-weight:700">오늘 저녁엔 뭘 할까?</p><div class="menu">${ACT.map((a,i)=>`<button data-a="${i}"><b>${a.n}</b><small>${a.d}</small></button>`).join('')}</div>`;
 document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=ACT[+b.dataset.a];a.t?target(a):doAct(a)})}
 function target(a){$.innerHTML=`<p style="font-weight:700;margin-top:14px">${a.n}: 누구에게 할까요?</p>${grid(true)}`;document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>doAct(a,P[+b.dataset.v]))}
 function doAct(a,t){const me=P[0],c=Math.random();log=[];
@@ -195,7 +211,8 @@ function vote(){$.innerHTML=`<div class="prize"><span class="sub">${day}일째 �
   document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>tally(+b.dataset.v))}
 function revote(pool,top){$.innerHTML=`<div class="prize"><span class="sub">${day}일째 밤 · 동점 재투표</span><b>${top}표 동점</b></div><p style="font-weight:700;font-size:18px;color:var(--pri);text-align:center">재투표: 방에서 인형을 눌러 고르세요</p>${grid(pool)}<div class="log">${pool.map(p=>p.n).join(', ')} 중에서만 다시 뽑습니다.${pool.includes(P[0])?'<br>나도 대상입니다!':''}</div>`;
   document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>tally(+b.dataset.v,pool))}
-function tally(mine,pool){const c={},L=live(),me=P[0],by=[];c[mine]=1;voted.push(mine);const anger=1+(START-prize)/START,cT={};
+function tally(mine,pool){P.forEach(p=>{if(p.promise==null)return;if(p.on&&p.promise!=mine){p.like-=3;p.mad=day;P[0].hate+=2;log.push(`${p.n}와의 약속을 어겼습니다! 사람들에게 들켰습니다.`)}p.promise=null});
+  const c={},L=live(),me=P[0],by=[];c[mine]=1;voted.push(mine);const anger=1+(START-prize)/START,cT={};
   [...new Set(L.map(p=>p.camp).filter(Boolean))].forEach(id=>{let bs=-1;(pool||L).filter(p=>p.camp!=id).forEach(p=>{const sc=p.hate+(p.i?0:P.filter(x=>x.on&&x.ally).length*1.5)+(p.camp?L.filter(x=>x.camp==p.camp).length:0)+Math.random()*1.5;if(sc>bs){bs=sc;cT[id]=p}})});
   [...L.slice(1)].sort(()=>Math.random()-.5).forEach(v=>{let top=null,bs=-99;const tgt=pool?pool.includes(P[mine]):true;
     if(v.ally&&mine==v.i){v.ally=false;v.mad=day;log.push(`${v.n}가 나의 배신에 동맹을 끊었습니다.`)}
@@ -211,7 +228,7 @@ function tally(mine,pool){const c={},L=live(),me=P[0],by=[];c[mine]=1;voted.push
     if(!p.i){s-=v.like*(v.mind==2?1.2:.7);if(voted.includes(v.i))s+=v.mind==0?5:1;}
     if(s>bs){bs=s;top=p}});c[top.i]=(c[top.i]||0)+1;if(!top.i)by.push(v.n)});
   const top=Math.max(...Object.values(c)),ids=Object.keys(c).filter(k=>c[k]==top);if(ids.length>1&&!pool)return revote(ids.map(k=>P[+k]),top);const out=P[+ids[R(ids.length)]];
-  out.on=false;log=[...log.filter(x=>x.includes('동맹')),`${out.n}가 ${top}표로 방에서 쫓겨났습니다.`,by.length?`나를 찍은 사람: ${by.join(', ')}`:'아무도 나를 찍지 않았습니다.'];
+  out.on=false;log=[...log.filter(x=>x.includes('동맹')||x.includes('약속')),`${out.n}가 ${top}표로 방에서 쫓겨났습니다.`,by.length?`나를 찍은 사람: ${by.join(', ')}`:'아무도 나를 찍지 않았습니다.'];
   if(!out.i)return end(`${top}표를 받고 쫓겨났습니다`);next()}
 function end(fail){const take=Math.max(0,(fail?0:Math.floor(prize/live().length))+stash);
   try{if(take>best())localStorage.setItem('room',take)}catch(e){}const bg=bag();bg.money+=take;saveBag(bg);
