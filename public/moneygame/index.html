@@ -123,8 +123,18 @@ function face(c,sad,f){return `<svg width="34" height="34" viewBox="0 0 32 32"><
 function grid(tap){return `<div class="ppl">${P.map(p=>{const t=tap&&p.on&&p.i&&(!tap.length||tap.includes(p))?`data-v="${p.i}"`:'';return `<button class="p ${p.on&&p.ally?'al':''} ${p.i?'':'me'} ${p.on?'':'out'}" ${t}>${face(COL[p.i],['굶주림','화남','불안','위축'].includes(p.f),p.f)}${p.n}<div style="font-weight:700;color:${FC[p.f]||'#66727a'}">${p.on?p.f:'퇴장'}</div><div class="hp"><i style="width:${p.hp}%"></i></div><div class="hate">${p.hate?'미움 '+p.hate:''}${p.like>0?' 호감 '+p.like:''}${p.on&&p.ally?`<b style="color:#2f6f5e"> 동맹 ${p.trust}%</b>`:''}${p.on&&p.camp&&p.seen?'<b style="color:#5d4a94"> 수상</b>':''}</div></button>`}).join('')}</div>`}
 function home(){$.innerHTML=`<h1>방 안의 8명,<br>상금 4억 8천만원</h1><p class="sub">14일을 버티면 남은 상금을 살아남은 사람끼리 나눕니다.<br>밤마다 각자 방에서 몰래 사 먹을 수 있지만, 그 돈은 상금에서 빠집니다.<br>아침이면 누가 썼는지 의심이 시작되고, 3일마다 투표로 쫓겨납니다.</p>
 <div class="ppl" style="margin-top:10px">${COL.map((c,i)=>`<div class="p">${face(c)}${NAMES[i]}</div>`).join('')}</div>
-<div class="menu" style="grid-template-columns:1fr"><button class="main" id="go">방에 들어가기</button><p class="sub" style="text-align:center">가상의 돈으로 하는 게임입니다${best()?` · 최고 ${man(best())}`:''}</p></div>`;go.onclick=start}
+<div class="menu" style="grid-template-columns:1fr"><button class="main" id="go">방에 들어가기</button><button id="toShop" style="text-align:center"><b>옷가게 · 금고 ${man(bag().money)}</b></button><p class="sub" style="text-align:center">가상의 돈으로 하는 게임입니다${best()?` · 최고 ${man(best())}`:''}</p></div>`;go.onclick=start;toShop.onclick=shop}
 function A3reset(){if(window.stageReset)stageReset()}
+const ITEMS=[{id:'ribbon',n:'리본',p:3000,s:'head'},{id:'scarf',n:'목도리',p:5000,s:'neck'},{id:'glasses',n:'선글라스',p:8000,s:'face'},{id:'hat',n:'밀짚모자',p:12000,s:'head'},{id:'cape',n:'망토',p:20000,s:'back'},{id:'crown',n:'왕관',p:50000,s:'head'}];
+function bag(){try{return Object.assign({money:0,own:[],eq:{}},JSON.parse(localStorage.getItem('roomBag')||'{}'))}catch(e){return{money:0,own:[],eq:{}}}}
+function saveBag(b){try{localStorage.setItem('roomBag',JSON.stringify(b))}catch(e){}window.stageOutfit&&stageOutfit(b.eq)}
+function shop(){window.quiet=true;window.stagePhase&&stagePhase('night');const b=bag();
+ $.innerHTML=`<div class="prize"><span class="sub">내 금고</span><b>${man(b.money)}</b></div><p class="sub">판마다 번 돈이 쌓입니다. 옷은 꾸미기용이에요.</p><div class="menu shop">${ITEMS.map(t=>{const own=b.own.includes(t.id),on=b.eq[t.s]==t.id;return `<button data-i="${t.id}" style="${on?'box-shadow:0 0 0 2px var(--pri)':''}"><b>${t.n}</b><small>${on?'입는 중':own?'입기':man(t.p)}</small></button>`}).join('')}</div><div class="log" id="sm">눌러서 사고, 입어 보세요.</div><div class="menu" style="grid-template-columns:1fr"><button class="main" id="back">돌아가기</button></div>`;
+ document.querySelectorAll('[data-i]').forEach(x=>x.onclick=()=>{const t=ITEMS.find(i=>i.id==x.dataset.i),c=bag();
+  if(c.own.includes(t.id)){if(c.eq[t.s]==t.id)delete c.eq[t.s];else c.eq[t.s]=t.id;saveBag(c);return shop()}
+  if(c.money<t.p){sm.textContent=`돈이 부족합니다. ${man(t.p-c.money)} 더 벌어 오세요.`;return}
+  c.money-=t.p;c.own.push(t.id);c.eq[t.s]=t.id;saveBag(c);shop()});
+ back.onclick=()=>{window.quiet=false;window.stagePhase&&stagePhase('');home()}}
 function best(){try{return +localStorage.getItem('room')||0}catch(e){return 0}}
 function start(){A3reset();p0=START;cart=[];met=false;rmsg='';P=NAMES.map((n,i)=>({i,n,hp:70,hate:0,like:0,on:true,greed:Math.random()*.5}));const m=[0,1,2,3,4,5].sort(()=>Math.random()-.5);P.slice(1).forEach((p,k)=>p.mind=m[k%6]);stash=0;voted=[];prize=START;p0=START;P.forEach(p=>p.f='평온');day=1;log=['첫날입니다. 다들 서로 눈치만 봅니다.'];draw()}
 function draw(){window.quiet=false;window.stagePhase&&stagePhase('');const lost=p0-prize;
@@ -203,11 +213,11 @@ function tally(mine,pool){const c={},L=live(),me=P[0],by=[];c[mine]=1;voted.push
   out.on=false;log=[...log.filter(x=>x.includes('동맹')),`${out.n}가 ${top}표로 방에서 쫓겨났습니다.`,by.length?`나를 찍은 사람: ${by.join(', ')}`:'아무도 나를 찍지 않았습니다.'];
   if(!out.i)return end(`${top}표를 받고 쫓겨났습니다`);next()}
 function end(fail){const take=Math.max(0,(fail?0:Math.floor(prize/live().length))+stash);
-  try{if(take>best())localStorage.setItem('room',take)}catch(e){}
+  try{if(take>best())localStorage.setItem('room',take)}catch(e){}const bg=bag();bg.money+=take;saveBag(bg);
   const text=fail?`머니게임: ${day}일째에 ${fail.replace('습니다','음')}. 상금 0원`:`머니게임: 14일을 버텨 ${man(take)} 획득, 생존 ${live().length}명`;
   $.innerHTML=`<p class="sub" style="margin-top:14px">${fail?day+'일째':'14일을 버텼습니다'}</p><div class="big">${man(take)}</div><p>${fail||`남은 상금 ${man(prize)}을 ${live().length}명이 나눴습니다`}</p>${stash>0?`<p class="sub">빼돌린 ${man(stash)} 포함</p>`:''}${grid()}<div class="log">${P.slice(1).map(p=>`${p.n}: ${MIND[p.mind][0]}${p.camp?' · 패거리 있음':''}, ${MIND[p.mind][1]}`).join('<br>')}</div>
-  <div class="menu" style="grid-template-columns:1fr"><button class="main" id="re">다시 들어가기</button><button id="sh" style="text-align:center">결과 공유</button></div>`;
-  re.onclick=start;sh.onclick=async()=>{try{if(navigator.share)await navigator.share({text});else{await navigator.clipboard.writeText(text);sh.textContent='복사했어요'}}catch(e){}}}
+  <div class="menu" style="grid-template-columns:1fr"><p class="sub" style="text-align:center">금고에 ${man(take)} 저금 · 총 ${man(bg.money)}</p><button class="main" id="re">다시 들어가기</button><button id="toShop" style="text-align:center">옷가게 가기</button><button id="sh" style="text-align:center">결과 공유</button></div>`;
+  re.onclick=start;toShop.onclick=shop;sh.onclick=async()=>{try{if(navigator.share)await navigator.share({text});else{await navigator.clipboard.writeText(text);sh.textContent='복사했어요'}}catch(e){}}}
 function initStage(){
 const el=document.getElementById('stage'),W=()=>el.clientWidth,H=()=>el.clientHeight;
 const r=new THREE.WebGLRenderer({antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(W(),H());el.appendChild(r.domElement);
@@ -257,6 +267,14 @@ window.stageCue=(i,to,sec=2.4)=>{A[i].cue=to;A[i].cueT=sec};
 window.stageTable=i=>stageCue(i,TABLE.clone().add(new THREE.Vector3((i-3.5)*.3,0,i%2?1.1:-1.1)));
 window.stageTo=(i,j)=>{if(P&&P[j])stageCue(i,A[j].g.position.clone().add(new THREE.Vector3(.9,0,.2)))};
 window.stagePhase=x=>phase=x;
+let fit=null;window.stageOutfit=eq=>{if(fit)ME.g.remove(fit);fit=new THREE.Group();ME.g.add(fit);const M=c=>new THREE.MeshLambertMaterial({color:c}),add=(g,c,x,y,z)=>{const o=new THREE.Mesh(g,M(c));o.position.set(x,y,z);fit.add(o);return o},Sp=r=>new THREE.SphereGeometry(r,12,10),Cy=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,20);
+ const v=Object.values(eq||{});
+ if(v.includes('ribbon')){add(Sp(.13),'#ff7fa8',-.17,1.76,.1).scale.set(1.2,.8,.6);add(Sp(.13),'#ff7fa8',.17,1.76,.1).scale.set(1.2,.8,.6);add(Sp(.07),'#e0507e',0,1.76,.14)}
+ if(v.includes('hat')){add(Cy(.68,.68,.05),'#e8cf8a',0,1.68,0);add(Cy(.34,.38,.32),'#e8cf8a',0,1.86,0);add(Cy(.385,.385,.07),'#d9534f',0,1.74,0)}
+ if(v.includes('crown')){add(Cy(.3,.28,.2),'#f2c230',0,1.84,0);[0,1,2,3,4].forEach(i=>{const a=i*1.257,c=new THREE.Mesh(new THREE.ConeGeometry(.08,.2,6),M('#f2c230'));c.position.set(Math.sin(a)*.25,2.02,Math.cos(a)*.25);fit.add(c)})}
+ if(v.includes('glasses')){[-.19,.19].forEach(x=>{const g=add(Cy(.14,.14,.03),'#222',x,1.33,.48);g.rotation.x=1.57});add(new THREE.BoxGeometry(.2,.03,.03),'#222',0,1.36,.5)}
+ if(v.includes('scarf')){const t=add(new THREE.TorusGeometry(.29,.09,10,20),'#d9534f',0,.92,0);t.rotation.x=1.57;add(new THREE.BoxGeometry(.16,.36,.08),'#d9534f',.16,.72,.3)}
+ if(v.includes('cape'))add(new THREE.BoxGeometry(.8,.95,.05),'#7a5cc0',0,.6,-.38)};
 const PROP={water:['#6fb7e0',.07,.2],bowl:['#fff8e8',.13,.1],chicken:['#b5702e',.14,.17],bottle:['#e9e4d2',.08,.26]};
 window.stageProp=(i,k,sec=3.6)=>{const a=A[i],d=PROP[k];if(a.prop)a.hand1.remove(a.prop);a.prop=new THREE.Mesh(new THREE.CylinderGeometry(d[1],d[1]*.8,d[2],10),new THREE.MeshLambertMaterial({color:d[0]}));a.prop.position.y=.12;a.hand1.add(a.prop);a.propT=sec;if(k=='bottle')a.drunk=sec+3};
 const BUZZ=['웅성웅성','누구야?','또 줄었어!','내 몫이...','수상한데','너 아니야?','이러다 0원이야'];
@@ -324,7 +342,7 @@ const _vote=vote;vote=()=>{window.stagePhase&&stagePhase('vote');log=[...log,...
  const _next=next;next=()=>{if(!window.stagePhase)return room();stagePhase('night');$.innerHTML=`<div class="prize"><span class="sub">${day}일째 밤</span><b>모두 각자 방으로</b></div><div class="log">${log.join('<br>')||'문이 하나씩 닫힙니다.'}</div>`;setTimeout(room,2600)};
  const _end=end;end=x=>{window.stagePhase&&stagePhase('');_end(x)};
  }
-try{P=NAMES.map((n,i)=>({i,n,hp:70,on:true,f:'평온'}));initStage()}catch(e){document.getElementById('stage').style.display='none';document.getElementById('app').style.marginTop=0}
+try{P=NAMES.map((n,i)=>({i,n,hp:70,on:true,f:'평온'}));initStage();stageOutfit(bag().eq)}catch(e){document.getElementById('stage').style.display='none';document.getElementById('app').style.marginTop=0}
 
 // 소리: 파일 없이 브라우저에서 바로 합성한다
 let AC=null,mute=false;try{mute=localStorage.getItem('roomMute')=='1'}catch(e){}
