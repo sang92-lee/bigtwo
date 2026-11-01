@@ -22,13 +22,18 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 #score small { display: block; font-size: 12px; opacity: .8 }
 #clock { text-align: center; font-size: 12px; line-height: 1.3 }
 #tug { height: 8px; background: var(--rival); overflow: hidden } #tugIn { height: 100%; width: 50%; background: var(--sign); transition: width .3s }
-#street { flex: 1; min-height: 0; position: relative } canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none }
+#street { flex: 1; min-height: 0; position: relative } #cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none }
 #hint { position: absolute; left: 0; right: 0; top: 0; background: var(--sign); color: var(--sign-ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; gap: 10px; align-items: center; font: 400 18px/1.3 var(--display) }
 #hint[hidden] { display: none } #hint span { flex: 1; min-width: 0 } #hint button { background: transparent; font: 13px var(--body); text-decoration: underline; flex: none }
 #finger { position: absolute; width: 64px; height: 64px; pointer-events: none; z-index: 4; transform: translate(-16px, -16px); filter: drop-shadow(0 3px 3px #15342f66) }
 #finger::before { content: ""; position: absolute; left: -10px; top: -10px; width: 52px; height: 52px; border: 4px solid var(--sign); border-radius: 50%; box-sizing: border-box; animation: ping .9s infinite }
 @keyframes ping { from { transform: scale(.55); opacity: 1 } to { transform: scale(1.35); opacity: 0 } }
-#hero { width: 100%; max-width: 280px; height: auto; align-self: center; flex: none }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: none }
+.chip { background: var(--paper); color: var(--ink); padding: 11px 2px; font: 400 15px var(--display) }
+.chip.on { background: var(--sign); color: var(--sign-ink); box-shadow: inset 0 0 0 3px var(--sign-ink) }
+.main[disabled] { background: #d6dcdb; color: #6d7a78 }
+#sheet > * { flex: none }
+#hero { width: 280px; max-width: 100%; aspect-ratio: 560 / 300; align-self: center }
 #mute { position: absolute; right: 8px; bottom: 8px; background: var(--ink); color: var(--paper); padding: 6px 10px; font-size: 13px }
 #desk { background: var(--steel); border-top: 5px solid var(--ink); padding: 10px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px }
 #pots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; min-width: 0 }
@@ -111,15 +116,15 @@ const TYPES = [
   { n: '미식가', tag: '맛!!', c: '#8b2fb0', p: .15, t: 2.6, s: .3 },
 ];
 const CHAPTERS = [
-  { place: '골목 포장마차', mix: [4, 3, 3, 0], gap: 1.5, rent: 20000, rt: 4.3, rs: 3.6, rp: 8000, banner: 19,
+  { place: '골목 포장마차', mix: [4, 3, 3, 0], gap: 1.5, rent: 20000, rt: 5, rs: 2.9, rp: 8000, banner: 15,
     intro: '할머니가 물려주신 솥 두 개로 포장마차를 열었어요.\n\n그런데 개업 첫날, 바로 옆에 커다란 간판이 올라갑니다.\n\n"반갑소. 옆집 왕대박국밥 왕사장이오.\n이 골목 국밥은 내가 접수하지."' },
-  { place: '시장 안 가게', mix: [3, 3, 4, 0], gap: 1.35, rent: 50000, rt: 5.6, rs: 2.8, rp: 8000, banner: 17,
+  { place: '시장 안 가게', mix: [3, 3, 4, 0], gap: 1.35, rent: 50000, rt: 6.6, rs: 2.2, rp: 8000, banner: 13,
     intro: '골목을 이기고 시장에 번듯한 가게를 얻었어요.\n\n짐을 푸는데 옆 가게 셔터가 올라갑니다.\n\n"또 만났네? 네가 가는 곳 옆엔 언제나 내가 있다."\n\n왕사장이 따라왔어요.' },
-  { place: '대학가', mix: [7, 1, 1, 1], gap: 1.2, rent: 80000, rt: 6.2, rs: 2.2, rp: 6500, banner: 15,
+  { place: '대학가', mix: [7, 1, 1, 1], gap: 1.2, rent: 80000, rt: 7.2, rs: 1.8, rp: 6500, banner: 12,
     intro: '대학가로 옮겼어요. 손님은 온통 학생입니다.\n\n옆집에 왕사장의 현수막이 걸렸어요.\n\n"국밥 6,500원. 학생은 돈이 없다."\n\n이곳의 승부는 가격이에요.' },
-  { place: '오피스 거리', mix: [1, 7, 1, 1], gap: 1.05, rent: 110000, rt: 6.2, rs: 1.6, rp: 8500, banner: 14,
+  { place: '오피스 거리', mix: [1, 7, 1, 1], gap: 1.05, rent: 110000, rt: 7.4, rs: 1.3, rp: 8500, banner: 11,
     intro: '점심시간의 오피스 거리. 넥타이 부대는 10분 안에 먹고 나가야 해요.\n\n"3초 국밥 들어갑니다!"\n\n왕사장이 스톱워치를 들고 서 있어요.\n\n이곳의 승부는 속도예요.' },
-  { place: '미식 거리', mix: [0, 1, 3, 6], gap: 1.05, rent: 150000, rt: 5, rs: 1.5, rp: 11000, banner: 12,
+  { place: '미식 거리', mix: [0, 1, 3, 6], gap: 1.05, rent: 150000, rt: 6.4, rs: 1.3, rp: 11000, banner: 11,
     intro: '드디어 전국 1등을 가리는 미식 거리.\n\n왕사장이 처음으로 웃지 않습니다.\n\n"국물 한번 먹어 봤다. 그 맛, 어디서 배웠지?"\n\n마지막 승부는 맛이에요.' },
 ];
 const FIRE = [4.4, 3.5, 2.8, 2.2, 1.7];   // 화력 단계별 끓이는 시간
@@ -174,9 +179,9 @@ function choose(g, c, r) {
   const d = g.d, ch = CHAPTERS[g.ch], w = TYPES[c.type];
   const mineServe = (cookTime(g) + .8) / g.pots;
   const val = (taste, price, wait) => w.t * taste + w.p * (9000 - price) / 1000 - w.s * wait / 4;
-  const me = val(g.taste + 1.2 + g.rep + (soup(d) !== 'ok' ? -1.5 : d.gold > 0 ? .8 : 0) + Math.min(d.combo * COMBO_PULL, 1.2) + d.flavor * .5, g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
+  const me = val(g.taste + 1.2 + g.rep + (soup(d) !== 'ok' ? -1.5 : d.gold > 0 ? .8 : 0) + Math.min(d.combo * COMBO_PULL, 1.2) + d.flavor * .5 + (d.fan && d.fan.includes(c.type) ? 1.5 : 0), g.price, coming(d, 0) * mineServe) + (d.buff[0] > 0 ? 2.2 : 0);
   // 앞서갈수록 왕사장도 악착같이 달라붙는다
-  const chase = Math.min(3.5, Math.max(0, (d.sales[0] - d.sales[1]) / (g.price * 5)));
+  const chase = Math.min(5, Math.max(0, (d.sales[0] - d.sales[1]) / (g.price * 3.5)));
   const rv = val(ch.rt, g.rp, coming(d, 1) * d.rs) + (d.buff[1] > 0 ? 2.2 : 0) + chase;
   return me + (r() - .5) * 3 >= rv ? 0 : 1;
 }
@@ -276,7 +281,7 @@ function stepDay(g, dt, r = Math.random) {
 }
 
 function startRaid(d) { d.raid = { x: .76 }; d.ev.push({ k: 'say', shop: 1, text: '거기 손님 좀 빌립시다~' }); }
-function endRaid(d, r) { d.raid = null; d.rt = 12 + r() * 6; d.boss = { s: 'away', t: 3 }; }
+function endRaid(d, r) { d.raid = null; d.rt = 8 + r() * 5; d.boss = { s: 'away', t: 3 }; }
 
 // 끌어서 뺏기: 노려볼 때 들고 있으면 들킨다
 function grab(g, c) {
@@ -429,8 +434,8 @@ const SAVE = 'gukbap-war-1', CUT_PX = 22;
 let g = null, last = 0, ctx, W = 0, H = 0, bubbles = [], steam = [], audio;
 const sheet = $('sheet');
 
-/* 소리는 파일 없이 합성한다. 쿵짝 트로트 반주, 보글보글 솥, 칼질, 쨍그랑, 왕사장 목소리 */
-let muted = false, master, koVoice = null, lastVoice = 0, nextStep = 0, step = 0, boilT = 0;
+/* 소리는 파일 없이 합성한다. 동네별 반주, 보글보글 솥, 칼질, 쨍그랑 */
+let muted = false, master, nextStep = 0, step = 0, boilT = 0;
 try { muted = localStorage.getItem('gukbap-mute') === '1'; } catch (e) {}
 function ac() {
   if (!audio) {
@@ -459,31 +464,18 @@ function noise(len, f0, f1, vol = .08, delay = 0, kind = 'bandpass') {
     src.connect(f).connect(v).connect(master); src.start(t);
   } catch (e) {}
 }
-function findVoice() { try { koVoice = speechSynthesis.getVoices().find(v => /^ko/i.test(v.lang)) || null; } catch (e) {} }
-try { findVoice(); speechSynthesis.onvoiceschanged = findVoice; } catch (e) {}
-// 한국어 음성이 있는 기기에서는 말하고, 없으면 false를 돌려 합성음으로 대신한다
-function voice(text, pitch = 1, rate = 1.15) {
-  if (muted || !koVoice) return false;
-  const now = performance.now(); if (now - lastVoice < 1300) return true;
-  try {
-    lastVoice = now; speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.voice = koVoice; u.lang = koVoice.lang; u.pitch = pitch; u.rate = rate; speechSynthesis.speak(u);
-    return true;
-  } catch (e) { return false; }
-}
 const sfx = {
   ding() { tone(988, 988, .1, 'triangle', .12); tone(1319, 1319, .16, 'triangle', .12, .09); },
   chop() { noise(.035, 2400, 900, .16); tone(190, 120, .04, 'square', .05); },
   coin() { tone(1319, 1319, .07, 'square', .05); tone(1976, 1976, .16, 'square', .05, .07); },
-  kya() { if (!voice('캬~', 1.3, 1.1)) { tone(520, 980, .14, 'sawtooth', .05); tone(980, 420, .3, 'sawtooth', .05, .14); } },
-  cold() { if (!voice('식었네', .8)) { tone(330, 300, .18, 'triangle', .07); tone(290, 170, .35, 'triangle', .07, .2); } },
-  laugh() { if (!voice('하하하하', .55, 1.25)) for (let i = 0; i < 4; i++) tone(190 - i * 12, 130, .12, 'sawtooth', .07, i * .15); },
+  kya() { tone(520, 980, .14, 'sawtooth', .05); tone(980, 420, .3, 'sawtooth', .05, .14); },
+  cold() { tone(330, 300, .18, 'triangle', .07); tone(290, 170, .35, 'triangle', .07, .2); },
+  laugh() { for (let i = 0; i < 4; i++) tone(190 - i * 12, 130, .12, 'sawtooth', .07, i * .15); },
   rip() { noise(.1, 3500, 900, .12); },
   ripped() { noise(.32, 4500, 400, .18); tone(660, 880, .12, 'square', .05, .22); },
   whoosh() { noise(.35, 500, 2600, .09); },
   ring() { [620, 1244, 1871].forEach((f, i) => tone(f, f * .99, 1.1 - i * .25, 'sine', .14 / (i + 1))); tone(70, 40, .4, 'sine', .3, .12); noise(.2, 300, 90, .2, .12); },
-  ouch() { if (!voice('아이고 내 머리야', .6, 1.3)) tone(700, 90, .6, 'sawtooth', .07, .15); },
+  ouch() { tone(700, 90, .6, 'sawtooth', .07, .15); },
   shatter() { for (let i = 0; i < 6; i++) { noise(.07, 6000, 3000, .1, i * .035); tone(1800 + Math.random() * 2400, 1500, .09, 'sine', .04, i * .03); } },
   pop() { tone(280, 1100, .11, 'sine', .15); },
   shoo() { tone(900, 160, .28, 'square', .06); },
@@ -497,17 +489,32 @@ const sfx = {
   win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, i === 3 ? .5 : .13, 'square', .07, i * .13)); },
   lose() { [392, 370, 349, 262].forEach((f, i) => tone(f, f * (i === 3 ? .8 : 1), i === 3 ? .7 : .22, 'sawtooth', .06, i * .24)); },
 };
-// 쿵짝쿵짝 트로트 반주. 마지막 10초는 빨라진다
-const TUNE = [440, 0, 523, 587, 659, 0, 587, 523, 440, 0, 392, 440, 523, 0, 0, 0, 659, 0, 784, 659, 587, 0, 523, 587, 659, 0, 523, 440, 392, 440, 0, 0];
+// 동네마다 곡이 다르고, 왕사장이 오면 서커스풍으로 바뀌며, 콤보가 쌓이면 화음이 붙는다
+const A = 440, C = 523, D = 587, E = 659, G = 784, HI = 880, L = 392, B3 = 494, F = 698;
+const TUNES = [
+  { bpm: 132, notes: [A, 0, C, D, E, 0, D, C, A, 0, L, A, C, 0, 0, 0, E, 0, G, E, D, 0, C, D, E, 0, C, A, L, A, 0, 0], bass: [110, 82] },
+  { bpm: 146, notes: [C, E, G, E, C, E, G, 0, D, F, HI, F, D, F, HI, 0, E, G, C * 2, G, E, G, C * 2, 0, G, F, E, D, C, 0, C, 0], bass: [131, 98] },
+  { bpm: 156, notes: [E, E, 0, E, 0, C, E, 0, G, 0, 0, 0, L, 0, 0, 0, C, 0, L, 0, E / 1.5, 0, A, B3, 0, A, L, E, G, HI, F, G], bass: [165, 110] },
+  { bpm: 172, notes: [A, A, E, A, C * 2, A, E, A, G, G, D, G, B3 * 2, G, D, G, F, F, C, F, A * 2, F, C, F, E, E, B3, E, G, E, B3, 0], bass: [110, 98] },
+  { bpm: 120, notes: [E, 0, 0, G, HI, 0, G, E, D, 0, 0, F, A * 2, 0, F, D, C, 0, 0, E, G, 0, E, C, B3, 0, D, 0, G, 0, 0, 0], bass: [131, 196] },
+];
+const RAID_TUNE = { bpm: 200, notes: [C * 2, B3 * 2, A * 2, G, C * 2, G, E, G, D * 2, C * 2, B3 * 2, A * 2, D * 2, A * 2, F, A * 2, E * 2, D * 2, C * 2, B3 * 2, A * 2, G, F, E, D, E, F, G, A * 2, B3 * 2, C * 2, 0], bass: [131, 196] };
 function music(d) {
   if (muted || !audio) return;
-  const gap = 60 / (DAY_LEN - d.t < 10 ? 176 : 132) / 2, now = audio.currentTime;
+  const song = d.raid ? RAID_TUNE : TUNES[Math.min(g.ch, TUNES.length - 1)];
+  const gap = 60 / (DAY_LEN - d.t < 10 ? song.bpm * 1.3 : song.bpm) / 2, now = audio.currentTime;
   if (nextStep < now) nextStep = now + .05;
   while (nextStep < now + .18) {
-    const at = nextStep - now, i = step % 32;
-    if (step % 4 === 0) tone(step % 8 === 0 ? 110 : 82, 50, .13, 'sine', .16, at);
-    if (step % 4 === 2) noise(.08, 2600, 1800, .05, at);
-    if (TUNE[i]) tone(TUNE[i], TUNE[i], gap * 1.5, 'triangle', .035, at);
+    const at = nextStep - now, i = step % 32, n = song.notes[i];
+    if (step % 4 === 0) tone(song.bass[(step / 4) % 2 | 0], 45, .14, 'sine', .17, at);
+    if (step % 4 === 2) noise(.07, 2600, 1800, .05, at);
+    if (step % 2 === 1) noise(.03, 7500, 6000, .025, at);
+    if (n) {
+      tone(n, n, gap * 1.4, 'triangle', .04, at);
+      tone(n * 1.004, n * 1.004, gap * 1.4, 'sawtooth', .012, at);
+      if (d.combo >= 3) tone(n * 1.5, n * 1.5, gap * 1.2, 'square', .012, at);
+      if (d.combo >= 6) tone(n * 2, n * 2, gap, 'triangle', .02, at);
+    }
     step++; nextStep += gap;
   }
 }
@@ -523,7 +530,7 @@ function boil(d, dt) {
 }
 function setMute(v) {
   muted = v; $('mute').textContent = muted ? '소리 끔' : '소리 켬';
-  try { localStorage.setItem('gukbap-mute', muted ? '1' : '0'); ac(); master.gain.value = muted ? 0 : 1; if (muted) speechSynthesis.cancel(); } catch (e) {}
+  try { localStorage.setItem('gukbap-mute', muted ? '1' : '0'); ac(); master.gain.value = muted ? 0 : 1; } catch (e) {}
 }
 function save() { try { const { d, ...keep } = g; localStorage.setItem(SAVE, JSON.stringify(keep)); } catch (e) {} }
 function load() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch (e) { return null; } }
@@ -534,17 +541,35 @@ const on = (id, f) => { $(id).onclick = () => { beep(520); f(); }; };
 
 /* 사골 육수: 실제 시간으로 16시간 끓이는 부가 모드. 게임을 꺼도 시간은 흐르고, 안 해도 장사는 할 수 있다 */
 const STOCK_KEY = 'gukbap-stock-1', STOCK_HOURS = 16, CARE_EVERY = 3, HOUR = 3600000;
+// 재료 3가지의 조합이 육수를 정한다. 비법을 찾을수록 보상이 커진다
+const STUFF = ['사골', '양지머리', '돼지뼈', '대파', '마늘', '생강', '무', '멸치'];
+const RECIPES = [
+  { name: '할머니 비법 육수', need: ['사골', '대파', '생강'], power: 3, fan: [0, 1, 2, 3], line: '이 맛이에요! 끝맛에 생강 한 톨. 모든 손님이 몰려요.' },
+  { name: '이상한 육수', need: ['돼지뼈', '멸치'], power: 0, line: '돼지와 멸치가 싸우고 있어요.' },
+  { name: '진한 곰탕 육수', need: ['사골', '양지머리'], power: 2, fan: [2, 3], line: '뽀얗고 고소해요. 어르신과 미식가가 몰려요.' },
+  { name: '구수한 돼지 육수', need: ['돼지뼈', '마늘'], power: 2, fan: [0], line: '든든하고 구수해요. 학생들이 몰려요.' },
+  { name: '시원한 해장 육수', need: ['무', '멸치'], power: 2, fan: [1], line: '속이 풀리는 맛이에요. 직장인이 몰려요.' },
+  { name: '그냥 육수', need: [], power: 1, line: '나쁘지 않은데 뭔가 아쉬워요.' },
+];
+const recipeOf = mix => RECIPES.find(r => r.need.every(x => mix.includes(x)));
+const BOOK_KEY = 'gukbap-book-1';
+function getBook() { try { return JSON.parse(localStorage.getItem(BOOK_KEY)) || []; } catch (e) { return []; } }
+function addBook(name) { try { const b = getBook(); if (!b.includes(name)) localStorage.setItem(BOOK_KEY, JSON.stringify(b.concat(name))); } catch (e) {} }
+let mix = [];
 function getStock() { try { return JSON.parse(localStorage.getItem(STOCK_KEY)); } catch (e) { return null; } }
 function setStock(v) { try { v ? localStorage.setItem(STOCK_KEY, JSON.stringify(v)) : localStorage.removeItem(STOCK_KEY); } catch (e) {} }
 const stockHours = st => (Date.now() - st.start) / HOUR;
 const careDue = st => { const i = Math.min(4, Math.floor(stockHours(st) / CARE_EVERY) - 1); return i >= 0 && !st.care[i] ? i : -1; };
+const STEP_MIN = 10, STEP_MAX = 6, LEGEND = 3, BIG_MAX = 8;
+const stockStep = st => Math.min(STEP_MAX, Math.floor(stockHours(st) * 60 / STEP_MIN));
+const stockValue = st => Math.min(BIG_MAX, careDone(st) + 1 + recipeOf(st.mix || []).power + stockStep(st) + (stockHours(st) >= STOCK_HOURS ? LEGEND : 0));
 const careDone = st => st.care.filter(Boolean).length;
 function clockText(h) { const left = Math.max(0, h), a = Math.floor(left), b = Math.ceil((left - a) * 60); return a ? `${a}시간 ${b}분` : `${b}분`; }
 function stockLabel() {
   const st = getStock();
   if (!st) return '사골 육수 16시간 끓이기';
   const h = stockHours(st);
-  return h >= STOCK_HOURS ? '사골 육수 완성! 가지러 가기' : careDue(st) >= 0 ? '사골 육수: 거품을 걷어 주세요!' : `사골 육수 끓는 중 · ${clockText(STOCK_HOURS - h)} 남음`;
+  return h >= STOCK_HOURS ? '전설의 육수 완성! 가지러 가기' : careDue(st) >= 0 ? '사골 육수: 거품을 걷어 주세요!' : stockStep(st) ? `사골 육수 맛 ${stockStep(st)}단계 · 가지러 가기` : '사골 육수 끓는 중 · 10분 뒤 맛 1단계';
 }
 function drawStockPot(c, fill) {
   c.clearRect(0, 0, 560, 300);
@@ -558,28 +583,43 @@ function drawStockPot(c, fill) {
 }
 function stockView(back) {
   const st = getStock(), h = st ? stockHours(st) : 0, due = st ? careDue(st) : -1, done = st && h >= STOCK_HOURS;
-  const head = `<h2>할머니의 사골 육수</h2><h1>${done ? '16시간 완성!' : st ? `${Math.floor(h)}시간째 끓는 중` : '16시간의 정성'}</h1><canvas id="hero" width="560" height="300"></canvas>`;
+  const head = `<h2>할머니의 사골 육수</h2><h1>${done ? '전설의 육수 완성!' : st ? `맛 ${stockStep(st)}단계` : '내 육수 만들기'}</h1><canvas id="hero" width="560" height="300"></canvas>`;
   let body = '', act = '';
   if (!st) {
-    body = '<p>할머니는 늘 사골을 16시간 끓이셨어요.\n\n실제 시간으로 16시간이 걸려요. 게임을 꺼도 계속 끓어요.\n3시간마다 들어와 거품을 걷으면 더 맛있어져요.\n\n안 해도 장사는 할 수 있어요.</p>';
-    act = '<button class="main" id="stockAct">불 켜기</button>';
+    const book = getBook();
+    body = `<p>재료 3가지를 골라 불을 켜세요. 조합마다 맛과 좋아하는 손님이 달라요.\n게임을 꺼도 끓고, 실제 시간 10분마다 맛이 한 단계 올라요. 16시간을 채우면 전설의 육수가 돼요.</p>
+      <div class="chips">${STUFF.map(x => `<button class="chip${mix.includes(x) ? ' on' : ''}" data-x="${x}">${x}</button>`).join('')}</div>
+      <p>할머니 쪽지: "뼈와 파, 그리고 끝맛에 한 톨"\n찾은 육수 ${book.length}/${RECIPES.length}${book.length ? ': ' + book.join(', ') : ''}</p>`;
+    act = `<button class="main" id="stockAct" ${mix.length === 3 ? '' : 'disabled'}>${mix.length === 3 ? '불 켜기' : `재료 ${3 - mix.length}개 더 고르세요`}</button>`;
   } else if (done) {
-    body = `<p>거품을 ${careDone(st)}번 걷었어요. 정성 ${'★'.repeat(careDone(st) + 1)}\n\n장사에 가져가면 처음부터 황금 육수와 맛 보너스를 받아요.</p>`;
-    act = g ? '<button class="main" id="stockAct">가게로 가져가기</button>' : '<p>이어서 하기로 가게 문을 연 뒤 가져갈 수 있어요.</p>';
+    const dish = recipeOf(st.mix || []); addBook(dish.name);
+    body = `<p><b>${dish.name}</b>\n${dish.line}\n\n거품을 ${careDone(st)}번 걷었어요. 16시간 전설 보너스까지 받았어요!</p>`;
+    act = g ? `<button class="main" id="stockTake">가게로 가져가기 · 황금 육수 ${stockValue(st) * 5}그릇</button>` : '<p>이어서 하기로 가게에 들어간 뒤 가져갈 수 있어요.</p>';
   } else if (due >= 0) {
-    body = '<p>육수 위로 거품이 떠올랐어요!</p>';
+    body = '<p>육수 위로 거품이 떠올랐어요! 걷어 주면 더 맛있어져요.</p>';
     act = '<button class="main" id="stockAct">거품 걷기</button>';
   } else {
     const next = (Math.floor(h / CARE_EVERY) + 1) * CARE_EVERY;
-    body = `<p>완성까지 ${clockText(STOCK_HOURS - h)} 남았어요.\n${next <= 15 ? `다음 거품은 ${clockText(next - h)} 뒤에 떠올라요.\n` : ''}지금까지 거품을 ${careDone(st)}번 걷었어요.</p>`;
+    const step = stockStep(st), toNext = (step + 1) * STEP_MIN / 60 - h, dish = recipeOf(st.mix || []);
+    body = `<p>넣은 재료: ${(st.mix || []).join(', ')}\n${step < STEP_MAX ? `다음 맛 단계까지 ${clockText(toNext)}\n` : '맛이 꽉 찼어요.\n'}전설의 육수까지 ${clockText(STOCK_HOURS - h)}\n${next <= 15 ? `다음 거품은 ${clockText(next - h)} 뒤\n` : ''}걷은 거품 ${careDone(st)}번</p>`;
+    if (step && g) { addBook(dish.name); act = `<button class="main" id="stockTake">지금 가져가기 · 황금 육수 ${stockValue(st) * 5}그릇</button>`; }
+    else if (step) act = '<p>이어서 하기로 가게에 들어간 뒤 가져갈 수 있어요.</p>';
   }
   show(`${head}${body}${act}<button class="ghost" id="stockBack">돌아가기</button>`, () => {
     drawStockPot($('hero').getContext('2d'), st ? Math.min(1, h / STOCK_HOURS) * .6 + .35 : .95);
     on('stockBack', back);
+    document.querySelectorAll('.chip').forEach(b => { b.onclick = () => {
+      const x = b.dataset.x; beep(520);
+      if (mix.includes(x)) mix = mix.filter(v => v !== x); else if (mix.length < 3) mix = mix.concat(x);
+      stockView(back);
+    }; });
+    if ($('stockTake')) on('stockTake', () => {
+      const dish = recipeOf(st.mix || []);
+      g.bigStock = stockValue(st); g.fan = dish.fan || null; setStock(null); save(); back();
+    });
     if (!$('stockAct')) return;
     on('stockAct', () => {
-      if (!st) setStock({ start: Date.now(), care: [false, false, false, false, false] });
-      else if (done) { g.bigStock = careDone(st) + 1; setStock(null); save(); return back(); }
+      if (!st) { if (mix.length < 3) return; setStock({ start: Date.now(), care: [false, false, false, false, false], mix }); mix = []; }
       else { st.care[due] = true; setStock(st); sfx.gold(); }
       stockView(back);
     });
@@ -657,8 +697,8 @@ function openShop() {
   $('aBowl').hidden = !has(g, 'raid'); $('aCall').hidden = $('aRice').hidden = !has(g, 'banner');
   $('acts').hidden = !has(g, 'raid');
   if (g.bigStock) {
-    g.d.big = g.bigStock; g.bigStock = 0; g.d.gold = g.d.big * 5; g.d.flavor = g.d.big * .4;
-    bubbles.push({ x: .25, y: .45, text: '16시간 사골 육수 개시!', t: 2.6, col: '#fff27a' });
+    g.d.big = g.bigStock; g.bigStock = 0; g.d.fan = g.fan; g.fan = null; g.d.gold = g.d.big * 5; g.d.flavor = Math.min(FLAVOR_MAX, g.d.big * .4);
+    bubbles.push({ x: .25, y: .45, text: '정성 육수 개시!', t: 2.6, col: '#fff27a' });
   }
   const fresh = newToday(); if (fresh) tutStart(fresh);
 }
@@ -719,7 +759,7 @@ function tutStart(key) {
 function tutEnd() {
   const d = g.d; g.seen = g.seen || {}; g.seen[tut] = true; tut = null;
   d.pots.forEach(p => { p.s = 'cook'; p.t = cookTime(g); p.lock = null; p.cuts = 0; });
-  Object.assign(d, { flavor: (d.big || 0) * .4, complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: (d.big || 0) * 5, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
+  Object.assign(d, { flavor: Math.min(FLAVOR_MAX, (d.big || 0) * .4), complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: (d.big || 0) * 5, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
   $('hint').hidden = true; $('finger').hidden = true;
   bubbles.push({ x: .5, y: .5, text: '좋아요! 이제 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
 }
@@ -941,7 +981,7 @@ function events() {
     if (e.k === 'warn') sfx.warn();
     if (e.k === 'review') {
       bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .13, text: `${'★'.repeat(e.star)} ${e.line}`, t: 2, col: e.star <= 2 ? '#ffd9d3' : '#fff27a' });
-      if (e.star <= 2) { sfx.cold(); voice(e.line, 1.1, 1.3); }
+      if (e.star <= 2) sfx.cold();
     }
     if (e.k === 'soup') { sfx.warn(); gradePop = { text: e.text, col: '#ff9d8a', t: .9 }; }
     if (e.k === 'gold') { sfx.gold(); gradePop = { text: '딱! 황금 육수', col: '#ffd21f', t: 1 }; }
@@ -956,7 +996,6 @@ function events() {
     if (e.k === 'miss') { sfx.shatter(); bubbles.push({ x: e.x, y: .42, text: '쨍그랑! 그릇값 -1,000원', t: 1.5 }); }
     if (e.k === 'bust') { sfx.siren(); setTimeout(sfx.laugh, 700); heldC = null; closeup = { mood: 'laugh', text: '벌금 12,000원!', t: 1 }; }
     if (e.k === 'banner') sfx.laugh();
-    if (e.k === 'say' && e.shop === 1) voice(e.text, .55, 1.15);
     if (e.k === 'say') bubbles.push(e.at ? { x: e.at.x, y: e.at.y - .08, text: e.text, t: 1.6 } : { x: e.shop ? .75 : .25, y: e.shop ? .27 : .42, text: e.text, t: 2.2, col: e.shop ? '#ffd9d3' : '#fff' });
     if (e.k === 'serve') { pops.push({ x: e.at.x, y: (e.at.py || .6) - .03, t: 1.2, best: e.best }); if (e.good) sfx.kya(); }
     if (e.k === 'serve') bubbles.push({ x: e.at.x, y: (e.at.py || .6) - .07, text: e.cuts >= 3 ? `고기 듬뿍! +${e.pay.toLocaleString('ko-KR')}` : e.best ? `더 맛있다! +${e.pay.toLocaleString('ko-KR')}` : e.good ? `캬~ +${e.pay.toLocaleString('ko-KR')}` : '식었네...', t: 1.2, col: e.good ? '#fff27a' : '#fff' });
