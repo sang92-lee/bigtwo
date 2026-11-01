@@ -53,7 +53,9 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px }
 #pour.on { box-shadow: 0 8px 0 -2px #ff8a1f, 0 12px 10px 0 #ff5a1f, inset 0 0 0 2px #fff6 }
 #pour.bad { animation: bob .4s infinite alternate }
 #pour.bad #brothIn { background: linear-gradient(#ffb19e, #ff7a59) }
-#acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
+#acts[hidden], .act[hidden], #pour[hidden] { display: none }
+#app.noBroth #pour { display: none } #app.noBroth #kitchen { grid-template-columns: 1fr }
+#acts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px }
 .act { background: var(--ink); color: var(--paper); padding: 9px 2px; font: 400 16px var(--display); position: relative; overflow: hidden }
 .act small { display: block; font: 12px var(--body); opacity: .8 } .act[disabled] { opacity: .45 }
 #aBowl { background: var(--pot); touch-action: none }
@@ -94,7 +96,7 @@ td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400
     <div id="acts">
       <button class="act" id="aCall">호객<small>잠깐 손님을 끌어요</small></button>
       <button class="act" id="aRice">공깃밥 서비스<small>2,000원 줄 달래기</small></button>
-      <button class="act" id="aBowl">왕사장 맞히기 <span id="bowlN">3</span><small id="aBowlNote">왕사장이 나오면 눌러요</small></button>
+      <button class="act" id="aBowl">뚝배기 던지기 <span id="bowlN">3</span><small id="aBowlNote">왕사장이 오면 막아요</small></button>
     </div>
   </div>
   <div id="finger" hidden><svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><path d="M26 26 58 58" stroke="#15342f" stroke-width="10" stroke-linecap="round"/><path d="M26 26 58 58" stroke="#dfe6e6" stroke-width="5" stroke-linecap="round"/><circle cx="16" cy="16" r="14" fill="#dfe6e6" stroke="#15342f" stroke-width="3"/><circle cx="16" cy="16" r="9" fill="#fff3d4"/><path d="M11 13h7M13 19h6" stroke="#b7795a" stroke-width="3" stroke-linecap="round"/></svg></div>
@@ -149,6 +151,10 @@ const TAUNTS = ['손님 없어 보이네?', '그 국물 맹물 아니야?', '우
 function newGame() { return { ch: 0, day: 0, money: 30000, taste: 0, fire: 0, pots: 2, price: 8000, rep: 0, rp: CHAPTERS[0].rp, weekMe: 0, weekRv: 0, snap: null }; }
 const cookTime = g => FIRE[g.fire];
 const stars = g => Math.max(1, Math.min(5, 3 + g.rep * 1.33));
+// 하루에 하나씩 배운다. 전체 며칠째인지로 무엇이 열렸는지 정한다
+const LEARN = { pot: 0, broth: 1, raid: 2, banner: 3, steal: 4 };
+const stage = g => g.ch * 3 + g.day;
+const has = (g, what) => stage(g) >= LEARN[what];
 const soup = d => d.broth < BROTH_LOW ? 'thin' : 'ok';
 const bowlCost = g => 2200 + g.taste * 500;
 function snapshot(g) { g.snap = { money: g.money, taste: g.taste, fire: g.fire, pots: g.pots, price: g.price }; }
@@ -190,7 +196,7 @@ function stepDay(g, dt, r = Math.random) {
     const c = { type, x: .5, y: 1.02, st: 'walk', shop: 0, wait: 13 + r() * 6, moved: false, id: Math.random() };
     c.shop = d.tutShop ?? choose(g, c, r); d.people.push(c);
   }
-  if (!d.tut) d.bt -= dt;
+  if (!d.tut && has(g, 'banner')) d.bt -= dt;
   if (d.bt <= 0) {
     d.bt = ch.banner * (.8 + r() * .4);
     const list = BANNERS.concat(CH_BANNERS[g.ch]), [a, b] = list[Math.floor(r() * list.length)];
@@ -203,7 +209,7 @@ function stepDay(g, dt, r = Math.random) {
     if (d.soup !== 'ok') { d.combo = 0; d.ev.push({ k: 'soup', text: '국물이 밍밍해요!' }); }
   }
   // 왕사장은 등을 돌렸다가 예고 뒤 노려보고, 건너오는 동안에는 문을 비운다
-  const b = d.boss; if (!d.tut) b.t -= dt;
+  const b = d.boss; if (!d.tut && has(g, 'steal')) b.t -= dt;
   if (d.raid) b.s = 'away';
   else if (b.t <= 0) {
     if (b.s === 'away') { b.s = 'warn'; b.t = 1; d.ev.push({ k: 'warn' }); }
@@ -216,7 +222,7 @@ function stepDay(g, dt, r = Math.random) {
     if (d.fly.t <= 0) landBowl(g);
   }
   if (b.s === 'watch') for (const c of d.people) if (c.st === 'held') busted(g, c);
-  if (!d.raid && !d.tut) { d.rt -= dt; if (d.rt <= 0) startRaid(d); }
+  if (!d.raid && !d.tut) { if (has(g, 'raid')) d.rt -= dt; if (d.rt <= 0) startRaid(d); }
   else if (!d.tut) {
     d.raid.x -= .46 / 3.2 * dt;
     if (d.raid.x <= .3) {
@@ -275,7 +281,7 @@ function endRaid(d, r) { d.raid = null; d.rt = 12 + r() * 6; d.boss = { s: 'away
 // 끌어서 뺏기: 노려볼 때 들고 있으면 들킨다
 function grab(g, c) {
   const d = g.d;
-  if (d.cd.steal > 0 || d.over || c.shop !== 1 || c.st !== 'queue') return false;
+  if (!has(g, 'steal') || d.cd.steal > 0 || d.over || c.shop !== 1 || c.st !== 'queue') return false;
   if (d.boss.s === 'watch') { busted(g, c); return false; }
   c.st = 'held'; return true;
 }
@@ -365,7 +371,7 @@ function serve(g, i) {
     }
     const rate = base && base + p.cuts * CUT_TIP + (thin ? -BAD_PAY : d.gold > 0 ? GOLD_PAY : 0), pay = Math.round(g.price * rate / 100) * 100;
     if (d.gold > 0) d.gold--;
-    d.broth = Math.max(0, d.broth - BROTH_BOWL);
+    if (has(g, 'broth')) d.broth = Math.max(0, d.broth - BROTH_BOWL);
     d.sales[0] += pay; d.served[0]++; d.spent += bowlCost(g);
     head.st = 'leave';
     d.ev.push({ k: 'serve', at: head, good: grade === 'perfect' || grade === 'good', best: grade === 'perfect', pay, cuts: p.cuts });
@@ -557,7 +563,11 @@ function morning() {
     $('price').oninput = e => { g.price = +e.target.value; $('pv').textContent = won(g.price); };
     const b = (id, w) => { if (!$(id).disabled) on(id, () => { buy(g, w); morning(); }); };
     b('uTaste', 'taste'); b('uFire', 'fire'); b('uPots', 'pots');
-    on('go', openShop);
+    on('go', () => {
+      const fresh = newToday();
+      if (!fresh) return openShop();
+      show(`<h2>${WHY[fresh][0]}</h2><h1>${g.ch * 3 + g.day + 1}번째 날</h1><p>${WHY[fresh][1]}</p><button class="main" id="go2">해 볼게요</button>`, () => on('go2', openShop));
+    });
   });
 }
 function openShop() {
@@ -586,7 +596,10 @@ function openShop() {
   box.style.gridTemplateColumns = `repeat(${g.pots > 3 ? 2 : g.pots}, 1fr)`;
   $('myName').textContent = LOOK[g.ch].me; $('rvName').textContent = LOOK[g.ch].rv;
   sheet.hidden = true; last = performance.now();
-  if (g.ch === 0 && g.day === 0 && !g.tutDone) tutStart();
+  $('app').classList.toggle('noBroth', !has(g, 'broth'));
+  $('aBowl').hidden = !has(g, 'raid'); $('aCall').hidden = $('aRice').hidden = !has(g, 'banner');
+  $('acts').hidden = !has(g, 'raid');
+  const fresh = newToday(); if (fresh) tutStart(fresh);
 }
 function dayOver() {
   const res = endDay(g), d = res;
@@ -616,37 +629,42 @@ function ending(a, b) {
 }
 
 /* 첫날 튜토리얼: 시간을 세워 두고 손가락으로 하나씩 따라 하게 한다 */
-const TUT = [
-  { text: '줄어드는 빨간 원이 솥에 겹칠 때 딱 누르세요!', start(d) { d.tutShop = 0; d.pots[0].s = 'cook'; d.pots[0].t = APPROACH + .5; d.pots[1].t = 99; }, done: d => d.perfect > 0 || d.served[0] > 1,
+const TUT = {
+  pot: { text: '줄어드는 빨간 원이 솥에 겹칠 때 딱 누르세요!', start(d) { d.tutShop = 0; d.pots[0].s = 'cook'; d.pots[0].t = APPROACH + .5; d.pots[1].t = 99; }, done: d => d.perfect > 0 || d.served[0] > 1,
     finger(d) { const r = rel($('pots').children[0]); return [r.x + r.w * .88, r.y + r.h * .88, r.x + r.w * .88, r.y + r.h * .88]; } },
-  { text: '육수통을 누르고 있다가 금색 선에서 딱 떼세요!', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
+  broth: { text: '육수통을 꾹 누르고 있다가 금색 선에서 딱 떼세요!', start(d) { d.broth = 20; d.target = 60; }, done: d => d.gold > 0,
     finger(d) { const r = rel($('pour')); return [r.x + r.w / 2, r.y + r.h / 2, r.x + r.w / 2, r.y + r.h / 2]; } },
-  { text: '옆집 손님을 끌어서 우리 집에 놓으세요', start(d) { d.tutShop = 1; }, done: d => d.stolen > 0,
+  steal: { text: '옆집 손님을 끌어서 우리 집에 놓으세요', start(d) { d.tutShop = 1; }, done: d => d.stolen > 0,
     finger(d) { const c = queue(d, 1)[0], r = rel($('cv')); return c ? [r.x + c.px * r.w, r.y + c.py * r.h, r.x + r.w * .25, r.y + r.h * .62] : null; } },
-  { text: '현수막이 걸렸어요! 연타해서 찢으세요', start(d) { d.banner = { a: BANNERS[1][0], b: BANNERS[1][1], t: 99, hp: 4 }; }, done: d => !d.banner,
+  banner: { text: '현수막이 걸렸어요! 연타해서 찢으세요', start(d) { d.banner = { a: BANNERS[1][0], b: BANNERS[1][1], t: 99, hp: 4 }; }, done: d => !d.banner,
     finger(d) { const r = rel($('cv')); return [r.x + r.w * .75, r.y + r.h * .35, r.x + r.w * .75, r.y + r.h * .35]; } },
-  { text: '조준이 초록색일 때 왕사장 맞히기를 누르세요!', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
+  raid: { text: '조준이 초록색일 때 뚝배기 던지기를 누르세요!', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
     finger(d) { if (d.bowls <= 0) d.bowls = 3; const b = rel($('aBowl')), r = rel($('cv')); return [b.x + b.w / 2, b.y + b.h / 2, b.x + b.w / 2, b.y + b.h / 2]; } },
-];
-let tut = -1;
+};
+let tut = null;
+const WHY = {
+  pot: ['오늘 배울 것: 솥', '국밥은 끓는 순간에 내야 제일 맛있어요.\n\n빨간 원이 솥에 겹칠 때 누르면 딱!\n딱! 맞출수록 국밥이 맛있어지고 비싸게 팔려요.\n\n오늘은 이것만 하면 돼요.'],
+  broth: ['오늘 배울 것: 육수통', '국밥을 팔수록 육수가 줄어요.\n바닥나면 맹물 국밥이 나가서 손님이 화내요.\n\n육수통을 꾹 눌러 채우세요.\n금색 선에서 떼면 더 맛있는 황금 육수가 돼요.'],
+  raid: ['오늘 배울 것: 왕사장 막기', '왕사장이 우리 손님을 뺏으러 건너와요!\n그냥 두면 손님을 데려가요.\n\n노란 조준이 초록색으로 변할 때 뚝배기를 던져 맞히면, 왕사장이 자빠지고 손님을 지켜요.'],
+  banner: ['오늘 배울 것: 현수막 찢기', '옆집이 현수막을 걸면 손님이 옆집으로 몰려요.\n현수막을 연타해서 찢으면 손님이 돌아와요.\n\n호객과 공깃밥 서비스 버튼도 오늘부터 쓸 수 있어요.'],
+  steal: ['오늘 배울 것: 손님 끌어오기', '이제 우리가 반격할 차례예요.\n옆집 줄의 손님을 손가락으로 끌어 우리 가게에 놓으세요.\n\n왕사장이 "!"를 띄우고 노려볼 때 들키면 벌금이에요.'],
+};
+const newToday = () => Object.keys(LEARN).find(k => LEARN[k] === stage(g) && !(g.seen && g.seen[k]));
 function rel(el) { const a = $('app').getBoundingClientRect(), b = el.getBoundingClientRect(); return { x: b.left - a.left, y: b.top - a.top, w: b.width, h: b.height }; }
-function tutStart() { g.d.tut = true; tut = -1; tutNext(); $('hint').hidden = false; $('finger').hidden = false; }
-function tutNext() {
-  tut++;
-  if (tut >= TUT.length) return tutEnd();
-  TUT[tut].start(g.d); $('hintText').textContent = TUT[tut].text;
-  if (tut) sfx.win();
+function tutStart(key) {
+  tut = key; g.d.tut = true; TUT[key].start(g.d);
+  $('hintText').textContent = TUT[key].text; $('hint').hidden = false; $('finger').hidden = false;
 }
 function tutEnd() {
-  const d = g.d; g.tutDone = true; tut = -1;
+  const d = g.d; g.seen = g.seen || {}; g.seen[tut] = true; tut = null;
   d.pots.forEach(p => { p.s = 'cook'; p.t = cookTime(g); p.lock = null; p.cuts = 0; });
   Object.assign(d, { flavor: 0, complaints: 0, reviews: [], tut: false, tutShop: undefined, broth: 70, pouring: false, soup: 'ok', target: 76, gold: 0, combo: 0, best: 0, banner: null, raid: null, sales: [0, 0], served: [0, 0], spent: 0, stolen: 0, hits: 0, bowls: 3, lost: 0, perfect: 0, boss: { s: 'away', t: 4 }, cd: { call: 0, rice: 0, steal: 0 } });
   $('hint').hidden = true; $('finger').hidden = true;
-  bubbles.push({ x: .5, y: .5, text: '연습 끝! 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
+  bubbles.push({ x: .5, y: .5, text: '좋아요! 이제 진짜 장사 시작!', t: 2.4, col: '#fff27a' }); sfx.win();
 }
 function tutTick() {
-  const d = g.d; if (!d.tut || tut < 0) return;
-  if (TUT[tut].done(d)) return tutNext();
+  const d = g.d; if (!d.tut || !tut) return;
+  if (TUT[tut].done(d)) return tutEnd();
   const p = TUT[tut].finger(d), f = $('finger'); f.hidden = !p; if (!p) return;
   const k = (Math.sin(performance.now() / 350) + 1) / 2;
   f.style.left = p[0] + (p[2] - p[0]) * k + 'px'; f.style.top = p[1] + (p[3] - p[1]) * k + 'px';
@@ -902,7 +920,7 @@ function hud() {
   const near = d.pots.some(p => p.s === 'cook' && p.t <= APPROACH && queue(d, 0).length), cue = $('cue');
   const bad = soup(d);
   cue.className = near || d.combo > 1 || d.gold || bad !== 'ok' ? 'go' : '';
-  cue.textContent = bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : '육수통은 금색 선에서 손을 떼세요';
+  cue.textContent = d.raid ? '왕사장이 손님을 뺏으러 와요! 막으세요' : bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo} · 맛 +${d.flavor.toFixed(1)}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : has(g, 'broth') ? '육수통은 금색 선에서 손을 떼세요' : '손님이 오면 원이 줄어들어요';
   $('aCall').disabled = d.cd.call > 0;
   $('aRice').disabled = d.cd.rice > 0;
   const level = Math.min(100, d.broth) / 100, inner = $('pour').clientHeight - 3;
@@ -911,7 +929,7 @@ function hud() {
   $('pour').classList.toggle('bad', soup(d) !== 'ok' || (d.broth < 35 && !d.pouring));
   $('brothText').textContent = d.pouring ? '금색에서 떼기' : d.broth < 45 ? '꾹 눌러요!' : '육수통';
   $('bowlN').textContent = d.bowls; $('aBowl').disabled = !canThrow(d);
-  $('aBowlNote').textContent = d.bowls <= 0 ? '오늘은 다 썼어요' : canThrow(d) ? '조준이 겹칠 때 눌러요' : '왕사장이 나오면 눌러요';
+  $('aBowlNote').textContent = d.bowls <= 0 ? '오늘은 다 썼어요' : canThrow(d) ? '초록색일 때 눌러요' : '왕사장이 오면 막아요';
 }
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
