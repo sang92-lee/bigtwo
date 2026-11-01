@@ -92,7 +92,7 @@ td, th { padding: 7px 10px; text-align: right; font-size: 15px; font-weight: 400
     <div id="acts">
       <button class="act" id="aCall">호객<small>잠깐 손님을 끌어요</small></button>
       <button class="act" id="aRice">공깃밥 서비스<small>2,000원 줄 달래기</small></button>
-      <button class="act" id="aBowl">왕사장 맞히기 <span id="bowlN">3</span><small>위로 튕겨요</small></button>
+      <button class="act" id="aBowl">왕사장 맞히기 <span id="bowlN">3</span><small id="aBowlNote">왕사장이 나오면 눌러요</small></button>
     </div>
   </div>
   <div id="finger" hidden>👆</div>
@@ -122,7 +122,7 @@ const FIRE = [4.4, 3.5, 2.8, 2.2, 1.7];   // 화력 단계별 끓이는 시간
 const COST = { taste: [120000, 300000, 600000, 1000000], fire: [100000, 260000, 520000, 900000], pots: [200000, 520000] };
 const FINE = 12000, DAY_LEN = 50, BURN_AGE = 2, DAYS = 3;
 const APPROACH = 1.2, PERFECT = .13, GOOD = .35, LOCK = .5, COMBO_PAY = .02, COMBO_PULL = .12;
-const BROTH_LOW = 20, BROTH_HIGH = 92, BROTH_DRIFT = .35, BROTH_BOWL = 4, BROTH_POUR = 38, GOLD_NEAR = 5, GOLD_BOWLS = 5, GOLD_PAY = .15, BAD_PAY = .2;
+const BROTH_LOW = 20, BROTH_BOWL = 4, BROTH_POUR = 38, GOLD_NEAR = 5, GOLD_BOWLS = 5, GOLD_PAY = .15, BAD_PAY = .2;
 const BANNERS = [
   ['3초 국밥! 앉기도 전에 나옴', '3초면 컵라면도 안 익음'], ['원조 중의 원조', '원조의 원조의 할머니'],
   ['사장이 잘생김', '사장이 더 잘생김'], ['오늘 고기 두 배', '어제 고기도 두 배'], ['깍두기 무한 리필', '깍두기가 맛있어야 무한이지'],
@@ -143,7 +143,7 @@ const TAUNTS = ['손님 없어 보이네?', '그 국물 맹물 아니야?', '우
 
 function newGame() { return { ch: 0, day: 0, money: 30000, taste: 0, fire: 0, pots: 2, price: 8000, rep: 0, rp: CHAPTERS[0].rp, weekMe: 0, weekRv: 0, snap: null }; }
 const cookTime = g => FIRE[g.fire];
-const soup = d => d.broth < BROTH_LOW ? 'thin' : d.broth > BROTH_HIGH ? 'salty' : 'ok';
+const soup = d => d.broth < BROTH_LOW ? 'thin' : 'ok';
 const bowlCost = g => 2200 + g.taste * 500;
 function snapshot(g) { g.snap = { money: g.money, taste: g.taste, fire: g.fire, pots: g.pots, price: g.price }; }
 function restore(g) { g.money = Math.max(g.money, 0) + 30000; g.day = 0; g.weekMe = g.weekRv = 0; g.rep = 0; g.rp = CHAPTERS[g.ch].rp; }
@@ -190,12 +190,11 @@ function stepDay(g, dt, r = Math.random) {
     const list = BANNERS.concat(CH_BANNERS[g.ch]), [a, b] = list[Math.floor(r() * list.length)];
     d.banner = { a, b, t: 7, hp: 6 }; d.buff[1] = 7; d.ev.push({ k: 'banner', text: a });
   }
-  // 육수는 저절로 줄고, 누르는 동안 불이 붙어 차오른다
+  // 누르는 동안 불이 붙어 차오르고, 국밥을 낼 때만 줄어든다
   if (d.pouring) d.broth = Math.min(100, d.broth + BROTH_POUR * dt);
-  else if (!d.tut) d.broth = Math.max(0, d.broth - BROTH_DRIFT * dt);
   if (soup(d) !== d.soup) {
     d.soup = soup(d);
-    if (d.soup !== 'ok') { d.combo = 0; d.ev.push({ k: 'soup', text: d.soup === 'thin' ? '국물이 밍밍해요!' : '너무 짜요!' }); }
+    if (d.soup !== 'ok') { d.combo = 0; d.ev.push({ k: 'soup', text: '국물이 밍밍해요!' }); }
   }
   // 왕사장은 등을 돌렸다가 예고 뒤 노려보고, 건너오는 동안에는 문을 비운다
   const b = d.boss; if (!d.tut) b.t -= dt;
@@ -205,6 +204,7 @@ function stepDay(g, dt, r = Math.random) {
     else if (b.s === 'warn') { b.s = 'watch'; b.t = 2.6; }
     else { b.s = 'away'; b.t = 4 + r() * 3.5; }
   }
+  d.sweep = (d.sweep || 0) + dt;
   if (d.fly) {
     d.fly.t -= dt;
     if (d.fly.t <= 0) landBowl(g);
@@ -304,9 +304,12 @@ function shoo(g) {
 
 // 뚝배기 던지기: 빗나가면 그릇값을 물고, 맞으면 왕사장이 자빠진다
 const BOSS_DOOR = .63, BOWL_HIT = .1, BOWL_FLIGHT = .4;
-function throwBowl(g, x) {
-  const d = g.d; if (d.bowls <= 0 || d.fly || d.over) return false;
-  d.bowls--; d.fly = { x, t: BOWL_FLIGHT };
+// 조준점은 왕사장이 나와 있는 동안 좌우로 오간다. 겹칠 때 눌러야 맞는다
+const aimAt = d => .55 + Math.sin(d.sweep * 3.2) * .4;
+const canThrow = d => d.bowls > 0 && !d.fly && (!!d.raid || d.boss.s === 'watch');
+function throwBowl(g) {
+  const d = g.d; if (d.over || !canThrow(d)) return false;
+  d.bowls--; d.fly = { x: aimAt(d), t: BOWL_FLIGHT };
   return true;
 }
 function landBowl(g) {
@@ -603,8 +606,8 @@ const TUT = [
     finger(d) { const c = queue(d, 1)[0], r = rel($('cv')); return c ? [r.x + c.px * r.w, r.y + c.py * r.h, r.x + r.w * .25, r.y + r.h * .62] : null; } },
   { text: '현수막이 걸렸어요! 연타해서 찢으세요', start(d) { d.banner = { a: BANNERS[1][0], b: BANNERS[1][1], t: 99, hp: 4 }; }, done: d => !d.banner,
     finger(d) { const r = rel($('cv')); return [r.x + r.w * .75, r.y + r.h * .35, r.x + r.w * .75, r.y + r.h * .35]; } },
-  { text: '왕사장이 와요! 왕사장 맞히기 버튼을 위로 튕기세요', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
-    finger(d) { if (d.bowls <= 0) d.bowls = 3; const b = rel($('aBowl')), r = rel($('cv')); return [b.x + b.w / 2, b.y + b.h / 2, r.x + r.w * .7, r.y + r.h * .62]; } },
+  { text: '조준이 초록색일 때 왕사장 맞히기를 누르세요!', start(d) { d.raid = { x: .7 }; }, done: d => !d.raid,
+    finger(d) { if (d.bowls <= 0) d.bowls = 3; const b = rel($('aBowl')), r = rel($('cv')); return [b.x + b.w / 2, b.y + b.h / 2, b.x + b.w / 2, b.y + b.h / 2]; } },
 ];
 let tut = -1;
 function rel(el) { const a = $('app').getBoundingClientRect(), b = el.getBoundingClientRect(); return { x: b.left - a.left, y: b.top - a.top, w: b.width, h: b.height }; }
@@ -808,33 +811,16 @@ const release = e => {
 };
 $('cv').addEventListener('pointerup', release); $('cv').addEventListener('pointercancel', release);
 
-// 뚝배기 버튼을 위로 튕긴 방향의 연장선이 왕사장 높이와 만나는 곳으로 날아간다
-let aim = null;
-function aimX(x0, y0, x1, y1) {
-  const r = $('cv').getBoundingClientRect(), line = r.top + r.height * .47;
-  return Math.max(0, Math.min(1, (x0 + (x1 - x0) * (line - y0) / (y1 - y0) - r.left) / r.width));
-}
 $('aBowl').addEventListener('pointerdown', e => {
-  if (!g || !g.d || g.d.bowls <= 0) return;
-  e.preventDefault(); $('aBowl').setPointerCapture(e.pointerId);
-  aim = { sx: e.clientX, sy: e.clientY, x: null };
+  e.preventDefault();
+  if (g && g.d && throwBowl(g)) sfx.whoosh();
 });
-$('aBowl').addEventListener('pointermove', e => {
-  if (aim) aim.x = aim.sy - e.clientY > 12 ? aimX(aim.sx, aim.sy, e.clientX, e.clientY) : null;
-});
-const flick = () => {
-  if (aim && g && g.d) {
-    if (aim.x === null) g.d.ev.push({ k: 'say', shop: 0, text: '위로 튕겨서 던져요' });
-    else if (throwBowl(g, aim.x)) sfx.whoosh();
-  }
-  aim = null;
-};
-$('aBowl').addEventListener('pointerup', flick); $('aBowl').addEventListener('pointercancel', () => { aim = null; });
 
 function drawBowl(d) {
-  if (aim && aim.x !== null) {
-    ctx.strokeStyle = '#ffd21f'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
-    ctx.beginPath(); ctx.moveTo(W * .84, H); ctx.lineTo(aim.x * W, H * .47); ctx.stroke(); ctx.setLineDash([]);
+  if (canThrow(d)) {
+    const x = aimAt(d) * W, y = H * .42, on = Math.abs(aimAt(d) - (d.raid ? d.raid.x : BOSS_DOOR)) < BOWL_HIT;
+    ctx.strokeStyle = on ? '#2fd07a' : '#ffd21f'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.arc(x, y, 22, 0, 7); ctx.moveTo(x - 30, y); ctx.lineTo(x + 30, y); ctx.moveTo(x, y - 30); ctx.lineTo(x, y + 30); ctx.stroke();
   }
   if (d.fly) {
     const p = 1 - d.fly.t / BOWL_FLIGHT, x = (.84 + (d.fly.x - .84) * p) * W, y = (1 + (.47 - 1) * p) * H - Math.sin(p * Math.PI) * 30;
@@ -883,15 +869,16 @@ function hud() {
   const near = d.pots.some(p => p.s === 'cook' && p.t <= APPROACH && queue(d, 0).length), cue = $('cue');
   const bad = soup(d);
   cue.className = near || d.combo > 1 || d.gold || bad !== 'ok' ? 'go' : '';
-  cue.textContent = bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : bad === 'salty' ? '너무 짜요! 그릇을 비우세요' : d.combo > 1 ? `딱! 콤보 ${d.combo}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : '육수통은 금색 선에서 손을 떼세요';
+  cue.textContent = bad === 'thin' ? '육수가 부족해요! 육수통을 꾹 누르세요' : d.combo > 1 ? `딱! 콤보 ${d.combo}` + (d.gold ? ` · 황금 육수 ${d.gold}그릇` : '') : d.gold ? `황금 육수 ${d.gold}그릇` : near ? '원이 솥에 겹칠 때 딱 누르세요!' : '육수통은 금색 선에서 손을 떼세요';
   $('aCall').disabled = d.cd.call > 0;
   $('aRice').disabled = d.cd.rice > 0;
-  const level = Math.min(100, d.broth) / 100, inner = $('pour').clientHeight - 6;
+  const level = Math.min(100, d.broth) / 100, inner = $('pour').clientHeight - 3;
   $('brothIn').style.height = level * inner + 'px';
   $('brothGold').style.bottom = 3 + d.target / 100 * inner - 2 + 'px';
   $('pour').classList.toggle('bad', soup(d) !== 'ok' || (d.broth < 35 && !d.pouring));
   $('brothText').textContent = d.pouring ? '금색에서 떼기' : d.broth < 45 ? '꾹 눌러요!' : '육수통';
-  $('bowlN').textContent = d.bowls; $('aBowl').disabled = d.bowls <= 0;
+  $('bowlN').textContent = d.bowls; $('aBowl').disabled = !canThrow(d);
+  $('aBowlNote').textContent = d.bowls <= 0 ? '오늘은 다 썼어요' : canThrow(d) ? '조준이 겹칠 때 눌러요' : '왕사장이 나오면 눌러요';
 }
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
