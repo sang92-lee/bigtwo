@@ -57,10 +57,12 @@ cp deploy.sh $REPO/unity/deploy.sh
 cat > $REPO/wrangler.toml <<'T'
 name = "bigtwo"
 compatibility_date = "2026-09-01"
+main = "worker.js"
 
-# Unity WebGL 빌드 파일만 그대로 보여주는 정적 사이트
+# 정적 사이트 + 코노 노래 검색(/api/yt, worker.js)
 [assets]
 directory = "./public"
+binding = "ASSETS"
 T
 
 cd $REPO

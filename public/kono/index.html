@@ -53,8 +53,13 @@ li{margin:4px 0}
 .p .note{opacity:0}
 .p.sing .note{animation:note 1.2s linear infinite}
 @keyframes note{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(14px,-30px)}}
+.p .mic{transition:transform .25s}
+.p.sing .mic{transform:translate(-12px,-14px) rotate(-10deg)}
 .p.off .mic{opacity:.3}
 .side .p{min-width:0}
+.res{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:8px 0}
+.res button{padding:6px;text-align:left;font-size:13px}
+.res img{width:100%;border-radius:8px;display:block;margin-bottom:4px;aspect-ratio:16/9;object-fit:cover}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:9}
 .fly{position:absolute;bottom:20px;font-size:40px;animation:up 1.8s ease-out forwards}
 @keyframes up{to{transform:translateY(-60vh) rotate(20deg);opacity:0}}
@@ -88,10 +93,11 @@ li{margin:4px 0}
 
     <div class="row">
       <input id="q" placeholder="노래 제목 (예: 좋니 노래방)">
-      <button id="find">유튜브에서 찾기</button>
+      <button id="find">🔍 찾기</button>
     </div>
+    <div class="res" id="res"></div>
     <div class="row">
-      <input id="url" placeholder="찾은 영상 링크 붙여넣기">
+      <input id="url" placeholder="(선택) 유튜브 링크 직접 붙여넣기">
       <button id="reserve" style="border-color:var(--yellow)">예약 🪙</button>
     </div>
 
@@ -213,11 +219,23 @@ function videoId(s){
   if(m)return m[1];
   return /^[\w-]{11}$/.test(s)?s:null;
 }
-$('find').onclick=()=>{
+async function search(){
   const q=$('q').value.trim();if(!q)return toast('노래 제목을 적어주세요');
-  window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q+' 노래방'),'_blank');
-  toast('영상 링크를 복사해서 아래 칸에 붙여넣어요');
-};
+  $('res').innerHTML='<div class="sub">찾는 중…</div>';
+  let items=[];
+  try{const r=await fetch('/api/yt?q='+encodeURIComponent(q+' 노래방'));items=await r.json()}catch(e){}
+  $('res').innerHTML=items.length?'':'<div class="sub">못 찾았어요. 다른 제목으로 해보세요</div>';
+  items.forEach(v=>{
+    const b=document.createElement('button');
+    b.innerHTML='<img loading="lazy"><div></div><div class="sub"></div>';
+    b.querySelector('img').src='https://i.ytimg.com/vi/'+v.id+'/mqdefault.jpg';
+    b.children[1].textContent=v.title;b.children[2].textContent=v.ch+' · '+v.len;
+    b.onclick=()=>{request({t:'add',song:{id:v.id,title:v.title,by:me}});toast('예약했어요 🪙');$('res').innerHTML='';$('q').value=''};
+    $('res').appendChild(b);
+  });
+}
+$('find').onclick=search;
+$('q').onkeydown=e=>{if(e.key==='Enter')search()};
 
 // ---------- 방 상태 (방장이 관리) ----------
 // state: {queue:[{id,title,by}], cur:{id,title,by}|null, start: 방장 기준 재생 시작 시각}
