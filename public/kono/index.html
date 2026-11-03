@@ -10,7 +10,7 @@ button{background:var(--panel);color:var(--text);border:2px solid var(--line);bo
 button:active{transform:scale(.96)}
 button.on{border-color:var(--pink);box-shadow:0 0 12px var(--pink)}
 input{background:#0d0720;color:var(--text);border:2px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
-.wrap{max-width:900px;margin:0 auto;padding:16px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
 /* 입구 */
 #lobby{display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:6vh;text-align:center}
 #lobby h1{font-size:clamp(44px,12vw,84px);margin:0;color:#fff;text-shadow:0 0 8px var(--pink),0 0 24px var(--pink),0 0 48px var(--pink)}
@@ -20,6 +20,11 @@ input{background:#0d0720;color:var(--text);border:2px solid var(--line);border-r
 .code{font-family:'Black Han Sans';font-size:44px;letter-spacing:12px;color:var(--yellow);text-shadow:0 0 12px var(--yellow);min-height:56px}
 /* 방 */
 #room{display:none}
+.stage{display:grid;grid-template-columns:1fr 200px;gap:12px;align-items:start}
+.side{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px}
+.side h3{margin:0 0 8px;font-family:'Black Han Sans';font-weight:400;color:var(--pink)}
+.side .ppl{flex-direction:column}
+@media(max-width:700px){.stage{grid-template-columns:1fr}.side .ppl{flex-direction:row}}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .top .neon{font-size:22px;color:var(--cyan);text-shadow:0 0 10px var(--cyan)}
 .screen{position:relative;border:4px solid var(--pink);border-radius:18px;box-shadow:0 0 20px var(--pink),inset 0 0 20px #000;overflow:hidden;aspect-ratio:16/9;background:#000}
@@ -64,11 +69,12 @@ li{margin:4px 0}
       <div class="neon" id="roomTitle">방</div>
       <button id="share">초대 링크 복사</button>
     </div>
-    <div class="screen">
+    <div class="stage"><div class="screen">
       <div id="yt"></div>
       <div id="idle"><div class="neon">곡을 예약하세요</div><div class="sub">유튜브 노래방 영상 링크를 붙여넣기</div></div>
       <div id="score"><div class="sub">점수</div><div class="n" id="scoreN">0</div></div>
     </div>
+    <div class="side"><h3>같이 온 사람 <span id="cnt"></span></h3><div class="ppl" id="ppl"></div></div></div>
     <div class="marquee" id="now">♪ 대기 중</div>
 
     <div class="row">
@@ -92,8 +98,7 @@ li{margin:4px 0}
       <label class="slider">반주 소리 <input type="range" id="vol" min="0" max="100" value="80"></label>
     </div>
 
-    <div class="box"><h3>방에 있는 사람</h3><div class="ppl" id="ppl"></div></div>
-    <div class="box"><h3>예약 목록</h3><ol id="list"></ol><div class="sub" id="empty">비어 있어요</div></div>
+        <div class="box"><h3>예약 목록</h3><ol id="list"></ol><div class="sub" id="empty">비어 있어요</div></div>
   </div>
 </div>
 <div id="fx"></div><div id="toast"></div>
@@ -229,7 +234,7 @@ function applyState(force){
   }
 }
 function drawPeople(){
-  $('ppl').innerHTML='';
+  $('ppl').innerHTML='';$('cnt').textContent=Object.keys(people).length+'명';
   Object.entries(people).forEach(([id,n])=>{
     const d=document.createElement('div');d.className='p';d.innerHTML='<div></div><div class="bar"><i id="lv-'+id+'"></i></div>';
     d.firstChild.textContent=(id===peer.id?'⭐ ':'')+n;$('ppl').appendChild(d);
