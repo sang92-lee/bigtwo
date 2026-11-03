@@ -1,0 +1,337 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b0618"></head><body><title>온라인 코노</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<style>
+:root{--bg:#0b0618;--panel:#160d2b;--line:#3a2766;--pink:#ff3fa4;--cyan:#33e6ff;--yellow:#ffe14d;--text:#f3eaff;--dim:#a99bc9}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#2a0f4d 0,var(--bg) 60%);color:var(--text);font-family:'Gowun Dodum',sans-serif;min-height:100vh}
+h1,.neon{font-family:'Black Han Sans',sans-serif;font-weight:400}
+button,input{font:inherit}
+button{background:var(--panel);color:var(--text);border:2px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
+button:active{transform:scale(.96)}
+button.on{border-color:var(--pink);box-shadow:0 0 12px var(--pink)}
+input{background:#0d0720;color:var(--text);border:2px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+/* 입구 */
+#lobby{display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:6vh;text-align:center}
+#lobby h1{font-size:clamp(44px,12vw,84px);margin:0;color:#fff;text-shadow:0 0 8px var(--pink),0 0 24px var(--pink),0 0 48px var(--pink)}
+.sub{color:var(--dim)}
+.pad{display:grid;grid-template-columns:repeat(3,72px);gap:10px}
+.pad button{font-size:24px;height:60px;font-family:'Black Han Sans'}
+.code{font-family:'Black Han Sans';font-size:44px;letter-spacing:12px;color:var(--yellow);text-shadow:0 0 12px var(--yellow);min-height:56px}
+/* 방 */
+#room{display:none}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.top .neon{font-size:22px;color:var(--cyan);text-shadow:0 0 10px var(--cyan)}
+.screen{position:relative;border:4px solid var(--pink);border-radius:18px;box-shadow:0 0 20px var(--pink),inset 0 0 20px #000;overflow:hidden;aspect-ratio:16/9;background:#000}
+#yt{position:absolute;inset:0;width:100%;height:100%}
+#idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;background:repeating-linear-gradient(0deg,#0000 0 3px,#ffffff06 3px 4px),linear-gradient(135deg,#1b0a3a,#05020d)}
+#idle .neon{font-size:clamp(28px,7vw,52px);color:var(--yellow);text-shadow:0 0 14px var(--yellow)}
+#score{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:#000c;z-index:3}
+#score .n{font-family:'Black Han Sans';font-size:clamp(80px,22vw,160px);color:var(--yellow);text-shadow:0 0 20px var(--pink)}
+.marquee{margin:10px 0;padding:8px 12px;border:2px solid var(--line);border-radius:12px;color:var(--cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.row input{flex:1}
+.box{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+.box h3{margin:0 0 8px;font-family:'Black Han Sans';font-weight:400;color:var(--pink)}
+.ppl{display:flex;gap:10px;flex-wrap:wrap}
+.p{background:#0d0720;border-radius:12px;padding:8px 10px;min-width:90px;text-align:center}
+.bar{height:6px;background:#2a1d4a;border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--pink))}
+ol{margin:0;padding-left:22px}
+li{margin:4px 0}
+.slider{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
+.slider input{flex:1;padding:0}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:9}
+.fly{position:absolute;bottom:20px;font-size:40px;animation:up 1.8s ease-out forwards}
+@keyframes up{to{transform:translateY(-60vh) rotate(20deg);opacity:0}}
+#toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--pink);color:#fff;padding:8px 14px;border-radius:10px;display:none;z-index:10}
+</style>
+
+<div class="wrap">
+  <div id="lobby">
+    <h1>코노</h1>
+    <div class="sub">친구랑 같이 부르는 온라인 코인노래방</div>
+    <input id="name" placeholder="내 이름" maxlength="8" style="text-align:center">
+    <div class="sub">방 번호 4자리</div>
+    <div class="code" id="codeView"></div>
+    <div class="pad" id="pad"></div>
+    <button id="enter" style="font-size:20px;padding:14px 40px;border-color:var(--pink)">입장 🎤</button>
+    <div class="sub" style="font-size:13px">이어폰을 끼면 소리가 울리지 않아요</div>
+  </div>
+
+  <div id="room">
+    <div class="top">
+      <div class="neon" id="roomTitle">방</div>
+      <button id="share">초대 링크 복사</button>
+    </div>
+    <div class="screen">
+      <div id="yt"></div>
+      <div id="idle"><div class="neon">곡을 예약하세요</div><div class="sub">유튜브 노래방 영상 링크를 붙여넣기</div></div>
+      <div id="score"><div class="sub">점수</div><div class="n" id="scoreN">0</div></div>
+    </div>
+    <div class="marquee" id="now">♪ 대기 중</div>
+
+    <div class="row">
+      <input id="q" placeholder="노래 제목 (예: 좋니 노래방)">
+      <button id="find">유튜브에서 찾기</button>
+    </div>
+    <div class="row">
+      <input id="url" placeholder="찾은 영상 링크 붙여넣기">
+      <button id="reserve" style="border-color:var(--yellow)">예약 🪙</button>
+    </div>
+
+    <div class="row">
+      <button id="mic" class="on">🎤 마이크 켜짐</button>
+      <button id="mon">내 목소리 듣기</button>
+      <button id="tam">🪇 탬버린</button>
+      <button id="clap">👏 박수</button>
+      <button id="skip">⏭ 취소</button>
+    </div>
+    <div class="row">
+      <label class="slider">에코 <input type="range" id="echo" min="0" max="100" value="45"></label>
+      <label class="slider">반주 소리 <input type="range" id="vol" min="0" max="100" value="80"></label>
+    </div>
+
+    <div class="box"><h3>방에 있는 사람</h3><div class="ppl" id="ppl"></div></div>
+    <div class="box"><h3>예약 목록</h3><ol id="list"></ol><div class="sub" id="empty">비어 있어요</div></div>
+  </div>
+</div>
+<div id="fx"></div><div id="toast"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const toast=t=>{const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2200)};
+
+// ---------- 입구: 방 번호 패드 ----------
+let code=new URLSearchParams(location.search).get('room')||'';
+code=code.replace(/\D/g,'').slice(0,4);
+try{$('name').value=localStorage.getItem('kono-name')||''}catch(e){}
+const drawCode=()=>$('codeView').textContent=code.padEnd(4,'·');
+['1','2','3','4','5','6','7','8','9','지움','0','랜덤'].forEach(k=>{
+  const b=document.createElement('button');b.textContent=k;
+  b.onclick=()=>{
+    if(k==='지움')code=code.slice(0,-1);
+    else if(k==='랜덤')code=String(1000+Math.floor(Math.random()*9000));
+    else if(code.length<4)code+=k;
+    drawCode();
+  };
+  $('pad').appendChild(b);
+});
+drawCode();
+
+// ---------- 오디오: 마이크 + 에코 ----------
+let ctx,out,micGain,echoWet,echoFb,revGain,micStream,myLevel=()=>0;
+function makeImpulse(sec){
+  const n=ctx.sampleRate*sec,b=ctx.createBuffer(2,n,ctx.sampleRate);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3)}
+  return b;
+}
+async function setupAudio(){
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  out=ctx.createGain();
+  micGain=ctx.createGain();
+  micGain.connect(out);
+  // 노래방 에코: 짧게 되울리는 딜레이 + 잔향
+  const delay=ctx.createDelay(1);delay.delayTime.value=.22;
+  echoFb=ctx.createGain();echoWet=ctx.createGain();
+  micGain.connect(delay);delay.connect(echoFb);echoFb.connect(delay);delay.connect(echoWet);echoWet.connect(out);
+  const conv=ctx.createConvolver();conv.buffer=makeImpulse(1.8);
+  revGain=ctx.createGain();micGain.connect(conv);conv.connect(revGain);revGain.connect(out);
+  setEcho();
+  const an=ctx.createAnalyser();an.fftSize=256;out.connect(an);myLevel=meter(an);
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    ctx.createMediaStreamSource(micStream).connect(micGain);
+  }catch(e){toast('마이크를 쓸 수 없어요. 듣기만 할 수 있어요');setMic(false)}
+  const dest=ctx.createMediaStreamDestination();out.connect(dest);
+  return dest.stream;
+}
+function setEcho(){
+  const v=$('echo').value/100;
+  if(!ctx)return;
+  echoWet.gain.value=v*.6;echoFb.gain.value=v*.45;revGain.gain.value=v*.5;
+}
+function meter(an){
+  const a=new Uint8Array(an.fftSize);
+  return()=>{an.getByteTimeDomainData(a);let s=0;for(const x of a){const d=(x-128)/128;s+=d*d}return Math.min(1,Math.sqrt(s/a.length)*5)};
+}
+let micOn=true,monOn=false;
+function setMic(on){
+  micOn=on;if(micGain)micGain.gain.value=on?1:0;
+  $('mic').textContent=on?'🎤 마이크 켜짐':'🎤 마이크 꺼짐';$('mic').classList.toggle('on',on);
+}
+$('mic').onclick=()=>setMic(!micOn);
+$('mon').onclick=()=>{
+  monOn=!monOn;$('mon').classList.toggle('on',monOn);
+  if(monOn){out.connect(ctx.destination);toast('이어폰을 끼고 들어주세요')}else out.disconnect(ctx.destination);
+};
+$('echo').oninput=setEcho;
+
+// 탬버린·박수 소리 (직접 합성)
+function noiseHit(freq,len,gain,when=0){
+  const t=ctx.currentTime+when,n=ctx.sampleRate*len,b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,4);
+  const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  s.buffer=b;f.type='highpass';f.frequency.value=freq;g.gain.value=gain;
+  s.connect(f);f.connect(g);g.connect(ctx.destination);s.start(t);
+}
+function playFx(kind){
+  if(!ctx)return;
+  if(kind==='tam'){noiseHit(6000,.25,.5);noiseHit(7000,.2,.35,.09)}
+  else for(let i=0;i<6;i++)noiseHit(1200,.08,.5,i*.07+Math.random()*.03);
+  const e=document.createElement('div');e.className='fly';e.textContent=kind==='tam'?'🪇':'👏';
+  e.style.left=(10+Math.random()*80)+'%';$('fx').appendChild(e);setTimeout(()=>e.remove(),1900);
+}
+
+// ---------- 유튜브 화면 ----------
+let player,ytReady=false;
+window.onYouTubeIframeAPIReady=()=>{
+  player=new YT.Player('yt',{playerVars:{playsinline:1,rel:0},events:{
+    onReady:()=>{ytReady=true;player.setVolume(+$('vol').value);applyState(true)},
+    onStateChange:e=>{if(e.data===YT.PlayerState.ENDED&&isHost)songEnded()}
+  }});
+};
+$('vol').oninput=()=>{if(ytReady)player.setVolume(+$('vol').value)};
+function videoId(s){
+  s=s.trim();
+  const m=s.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/);
+  if(m)return m[1];
+  return /^[\w-]{11}$/.test(s)?s:null;
+}
+$('find').onclick=()=>{
+  const q=$('q').value.trim();if(!q)return toast('노래 제목을 적어주세요');
+  window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q+' 노래방'),'_blank');
+  toast('영상 링크를 복사해서 아래 칸에 붙여넣어요');
+};
+
+// ---------- 방 상태 (방장이 관리) ----------
+// state: {queue:[{id,title,by}], cur:{id,title,by}|null, start: 방장 기준 재생 시작 시각}
+let state={queue:[],cur:null,start:0},people={},isHost=false,me='',peer,hostConn,conns={};
+const now=()=>Date.now();
+let lastCurId=null,singStart=0,singSum=0,singN=0;
+
+function applyState(force){
+  $('idle').style.display=state.cur?'none':'flex';
+  $('now').textContent=state.cur?'♪ '+state.cur.title+' — '+state.cur.by:'♪ 대기 중';
+  $('list').innerHTML='';
+  state.queue.forEach(s=>{const li=document.createElement('li');li.textContent=s.title+' — '+s.by;$('list').appendChild(li)});
+  $('empty').style.display=state.queue.length?'none':'block';
+  if(!ytReady)return;
+  if(!state.cur){if(lastCurId){player.stopVideo();lastCurId=null}return}
+  const pos=Math.max(0,(now()+clockOff-state.start)/1000);
+  if(state.cur.id!==lastCurId){
+    lastCurId=state.cur.id;singSum=0;singN=0;
+    player.loadVideoById({videoId:state.cur.id,startSeconds:pos});
+  }else if(force){
+    const t=player.getCurrentTime?player.getCurrentTime():0;
+    if(Math.abs(t-pos)>1.5)player.seekTo(pos,true);
+  }
+}
+function drawPeople(){
+  $('ppl').innerHTML='';
+  Object.entries(people).forEach(([id,n])=>{
+    const d=document.createElement('div');d.className='p';d.innerHTML='<div></div><div class="bar"><i id="lv-'+id+'"></i></div>';
+    d.firstChild.textContent=(id===peer.id?'⭐ ':'')+n;$('ppl').appendChild(d);
+  });
+}
+function broadcast(m){Object.values(conns).forEach(c=>c.open&&c.send(m))}
+function hostSync(){broadcast({t:'state',state,people,hostNow:now()});applyState(true);drawPeople()}
+function request(m){if(isHost)handle(m,peer.id);else hostConn&&hostConn.send(m)}
+function handle(m,from){ // 방장만
+  if(m.t==='add'){state.queue.push(m.song);if(!state.cur)nextSong();hostSync()}
+  if(m.t==='skip'){nextSong();hostSync()}
+  if(m.t==='fx'){broadcast(m);playFx(m.kind)}
+}
+function nextSong(){state.cur=state.queue.shift()||null;state.start=now()+1500}
+function songEnded(){broadcast({t:'end'});showScore();nextSong();setTimeout(hostSync,3200)}
+function showScore(){
+  const avg=singN?singSum/singN:0;
+  const s=Math.min(100,Math.round(70+avg*60+Math.random()*12));
+  $('scoreN').textContent=s;$('score').style.display='flex';
+  for(let i=0;i<4;i++)setTimeout(()=>playFx('clap'),i*300);
+  setTimeout(()=>$('score').style.display='none',3000);
+}
+$('reserve').onclick=async()=>{
+  const id=videoId($('url').value);if(!id)return toast('유튜브 링크가 아니에요');
+  let title='노래 '+id;
+  try{const r=await fetch('https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v='+id);if(r.ok)title=(await r.json()).title}catch(e){}
+  request({t:'add',song:{id,title,by:me}});$('url').value='';toast('예약했어요 🪙');
+};
+$('skip').onclick=()=>request({t:'skip'});
+$('tam').onclick=()=>request({t:'fx',kind:'tam'});
+$('clap').onclick=()=>request({t:'fx',kind:'clap'});
+$('share').onclick=()=>{
+  const u=location.origin+location.pathname+'?room='+code;
+  navigator.clipboard?.writeText(u).then(()=>toast('링크를 복사했어요'),()=>toast(u));
+};
+
+// ---------- 연결 (PeerJS) ----------
+let myStream,clockOff=0;
+const audios={};
+function addRemoteAudio(id,stream){
+  let a=audios[id];if(!a){a=audios[id]=document.createElement('audio');a.autoplay=true;a.playsInline=true;document.body.appendChild(a)}
+  a.srcObject=stream;a.play().catch(()=>{});
+  try{const an=ctx.createAnalyser();an.fftSize=256;ctx.createMediaStreamSource(stream).connect(an);levels[id]=meter(an)}catch(e){}
+}
+const levels={};
+function callPeer(id){if(id===peer.id)return;const c=peer.call(id,myStream);c.on('stream',s=>addRemoteAudio(id,s))}
+function dropPeer(id){delete people[id];delete conns[id];audios[id]?.remove();delete audios[id];delete levels[id]}
+
+function startPeer(id,asHost){
+  peer=new Peer(id);
+  peer.on('call',c=>{c.answer(myStream);c.on('stream',s=>addRemoteAudio(c.peer,s))});
+  peer.on('error',e=>{
+    if(e.type==='unavailable-id'&&asHost){peer.destroy();startPeer(undefined,false)}
+    else if(e.type==='peer-unavailable'&&!asHost&&!hostConn?.open){peer.destroy();startPeer('kono-'+code,true)}
+    else if(e.type!=='peer-unavailable')toast('연결 문제: '+e.type);
+  });
+  peer.on('open',pid=>{
+    isHost=asHost;
+    if(asHost){
+      people={[pid]:me};drawPeople();applyState(true);toast('방을 만들었어요. 초대 링크를 보내요');
+      peer.on('connection',c=>{
+        c.on('open',()=>{conns[c.peer]=c});
+        c.on('data',m=>{
+          if(m.t==='hello'){people[c.peer]=m.name;c.send({t:'peers',list:Object.keys(people).filter(x=>x!==c.peer)});hostSync();toast(m.name+' 님 입장')}
+          else handle(m,c.peer);
+        });
+        c.on('close',()=>{const n=people[c.peer];dropPeer(c.peer);hostSync();n&&toast(n+' 님 퇴장')});
+      });
+    }else{
+      hostConn=peer.connect('kono-'+code,{reliable:true});
+      hostConn.on('open',()=>hostConn.send({t:'hello',name:me}));
+      hostConn.on('data',m=>{
+        if(m.t==='peers')m.list.forEach(callPeer); // 방에 있던 모두에게 목소리 연결
+        if(m.t==='state'){clockOff=m.hostNow-now();state=m.state;people=m.people;applyState(true);drawPeople()}
+        if(m.t==='fx')playFx(m.kind);
+        if(m.t==='end')showScore();
+      });
+      hostConn.on('close',()=>toast('방장이 나갔어요. 다시 입장해 주세요'));
+    }
+  });
+}
+
+$('enter').onclick=async()=>{
+  me=$('name').value.trim()||'손님'+Math.floor(Math.random()*90+10);
+  if(code.length!==4)return toast('방 번호 4자리를 눌러주세요');
+  try{localStorage.setItem('kono-name',me)}catch(e){}
+  $('enter').disabled=true;
+  myStream=await setupAudio();
+  $('lobby').style.display='none';$('room').style.display='block';
+  $('roomTitle').textContent=code+'번 방';
+  history.replaceState(null,'','?room='+code);
+  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s);
+  startPeer('kono-'+code,true); // 먼저 방장 자리를 잡아보고, 있으면 손님으로
+};
+
+// 음량 막대 + 점수용 기록 + 주기 동기화
+setInterval(()=>{
+  if(!peer)return;
+  const mine=micOn?myLevel():0;
+  if(state.cur&&ytReady&&player.getPlayerState?.()===1){singSum+=mine;singN++}
+  const el=document.getElementById('lv-'+peer.id);if(el)el.style.width=mine*100+'%';
+  for(const id in levels){const e=document.getElementById('lv-'+id);if(e)e.style.width=levels[id]()*100+'%'}
+},100);
+setInterval(()=>{if(isHost&&Object.keys(conns).length)hostSync()},8000);
+</script>
