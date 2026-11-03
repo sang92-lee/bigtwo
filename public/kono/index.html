@@ -46,6 +46,15 @@ ol{margin:0;padding-left:22px}
 li{margin:4px 0}
 .slider{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
 .slider input{flex:1;padding:0}
+.p svg{width:110px;height:120px;display:block;margin:0 auto}
+.p .who{transform-origin:55px 110px}
+.p.sing .who{animation:bob .45s ease-in-out infinite alternate}
+@keyframes bob{from{transform:rotate(-4deg) translateY(0)}to{transform:rotate(4deg) translateY(-4px)}}
+.p .note{opacity:0}
+.p.sing .note{animation:note 1.2s linear infinite}
+@keyframes note{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(14px,-30px)}}
+.p.off .mic{opacity:.3}
+.side .p{min-width:0}
 #fx{position:fixed;inset:0;pointer-events:none;z-index:9}
 .fly{position:absolute;bottom:20px;font-size:40px;animation:up 1.8s ease-out forwards}
 @keyframes up{to{transform:translateY(-60vh) rotate(20deg);opacity:0}}
@@ -233,11 +242,32 @@ function applyState(force){
     if(Math.abs(t-pos)>1.5)player.seekTo(pos,true);
   }
 }
+// 마이크 든 캐릭터: 소리가 나면 입이 벌어지고 몸을 흔든다
+const COLORS=['#ff3fa4','#33e6ff','#ffe14d','#8dff6a','#b07cff','#ff8a3d'];
+function avatar(id){
+  let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))>>>0;
+  const c=COLORS[h%COLORS.length],hair=['#2b1a12','#5a3a1e','#111','#c98b4a'][h%4];
+  return `<svg viewBox="0 0 110 120"><g class="who">
+  <path d="M25 118 Q25 78 55 78 Q85 78 85 118Z" fill="${c}"/>
+  <circle cx="55" cy="50" r="26" fill="#ffd9b8"/>
+  <path d="M29 48 Q30 20 55 22 Q80 20 81 48 Q70 34 55 34 Q40 34 29 48Z" fill="${hair}"/>
+  <circle cx="45" cy="50" r="3" fill="#222"/><circle cx="65" cy="50" r="3" fill="#222"/>
+  <circle cx="40" cy="60" r="4" fill="#ff9aa8" opacity=".6"/><circle cx="70" cy="60" r="4" fill="#ff9aa8" opacity=".6"/>
+  <ellipse id="mo-${id}" cx="55" cy="64" rx="5" ry="1.5" fill="#7a1f2b"/>
+  <g class="mic"><rect x="70" y="66" width="7" height="30" rx="3" fill="#333" transform="rotate(-25 73 80)"/>
+  <circle cx="66" cy="66" r="7" fill="#bbb" stroke="#777"/><circle cx="80" cy="92" r="6" fill="#ffd9b8"/></g>
+  <text class="note" x="82" y="40" font-size="16" fill="${c}">♪</text></g></svg>`;
+}
+function setLv(id,v,on=true){
+  const b=document.getElementById('lv-'+id);if(b)b.style.width=v*100+'%';
+  const m=document.getElementById('mo-'+id);if(m)m.setAttribute('ry',1.5+v*8);
+  const p=document.getElementById('pc-'+id);if(p){p.classList.toggle('sing',v>.12);p.classList.toggle('off',!on)}
+}
 function drawPeople(){
   $('ppl').innerHTML='';$('cnt').textContent=Object.keys(people).length+'명';
   Object.entries(people).forEach(([id,n])=>{
-    const d=document.createElement('div');d.className='p';d.innerHTML='<div></div><div class="bar"><i id="lv-'+id+'"></i></div>';
-    d.firstChild.textContent=(id===peer.id?'⭐ ':'')+n;$('ppl').appendChild(d);
+    const d=document.createElement('div');d.className='p';d.id='pc-'+id;d.innerHTML=avatar(id)+'<div></div><div class="bar"><i id="lv-'+id+'"></i></div>';
+    d.children[1].textContent=(id===peer.id?'⭐ ':'')+n;$('ppl').appendChild(d);
   });
 }
 function broadcast(m){Object.values(conns).forEach(c=>c.open&&c.send(m))}
@@ -335,8 +365,8 @@ setInterval(()=>{
   if(!peer)return;
   const mine=micOn?myLevel():0;
   if(state.cur&&ytReady&&player.getPlayerState?.()===1){singSum+=mine;singN++}
-  const el=document.getElementById('lv-'+peer.id);if(el)el.style.width=mine*100+'%';
-  for(const id in levels){const e=document.getElementById('lv-'+id);if(e)e.style.width=levels[id]()*100+'%'}
+  setLv(peer.id,mine,micOn);
+  for(const id in levels)setLv(id,levels[id]());
 },100);
 setInterval(()=>{if(isHost&&Object.keys(conns).length)hostSync()},8000);
 </script>
