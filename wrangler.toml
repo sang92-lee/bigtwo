@@ -2,7 +2,7 @@ name = "bigtwo"
 compatibility_date = "2026-09-01"
 main = "worker.js"
 
-# 정적 사이트 + 코노 노래 검색(/api/yt)
+# 해기 상황판 데이터 (public/market.json)
 [assets]
 directory = "./public"
 binding = "ASSETS"

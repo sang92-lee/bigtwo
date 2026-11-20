@@ -1,0 +1,457 @@
+{
+ "updated": "2026-11-20T22:43+09:00",
+ "alert": {
+  "score": 56,
+  "level": "경계",
+  "bad": 6,
+  "warn": 8,
+  "ok": 4
+ },
+ "checks": [
+  {
+   "id": "fed_rate",
+   "group": "금리",
+   "item": "기준금리 (실효)",
+   "value": "3.88",
+   "unit": "%",
+   "status": "warn",
+   "asof": "2026-11-18",
+   "source": "CNBC (CME FedWatch)"
+  },
+  {
+   "id": "hike_prob",
+   "group": "금리",
+   "item": "12월 인상 확률",
+   "value": "95",
+   "unit": "%",
+   "status": "bad",
+   "asof": "2026-11-18",
+   "source": "CNBC (CME FedWatch)"
+  },
+  {
+   "id": "ust10",
+   "group": "금리",
+   "item": "미국 10년물 국채",
+   "value": "5.06",
+   "unit": "%",
+   "status": "bad",
+   "asof": "2026-11-19",
+   "source": "yourbestsavings.com"
+  },
+  {
+   "id": "rate_2027",
+   "group": "금리",
+   "item": "2027년 말 예상 기준금리",
+   "value": "4.7",
+   "unit": "%",
+   "status": "warn",
+   "asof": "2026-11-18",
+   "source": "CNBC (선물시장)"
+  },
+  {
+   "id": "brent",
+   "group": "유가",
+   "item": "브렌트유",
+   "value": "92.2",
+   "unit": "$",
+   "status": "warn",
+   "asof": "2026-11-20",
+   "source": "HDFC Sky"
+  },
+  {
+   "id": "oil_month",
+   "group": "유가",
+   "item": "이번 달 유가 변화",
+   "value": "-15",
+   "unit": "%",
+   "status": "ok",
+   "asof": "2026-11-20",
+   "source": "HDFC Sky"
+  },
+  {
+   "id": "cw_int",
+   "group": "AI 빚",
+   "item": "코어위브 이자 ÷ 영업이익",
+   "value": "4.1",
+   "unit": "배",
+   "status": "bad",
+   "asof": "2026-11-17",
+   "source": "BigGo Finance (분기 이자 8.46억 / 영업이익 2.07억 달러)"
+  },
+  {
+   "id": "orcl_fcf",
+   "group": "AI 빚",
+   "item": "오라클 1년 잉여현금",
+   "value": "-237",
+   "unit": "억 달러",
+   "status": "bad",
+   "asof": "2026-06-11",
+   "source": "Oracle FY2026 실적 발표"
+  },
+  {
+   "id": "capex_ratio",
+   "group": "빅테크",
+   "item": "투자 ÷ 영업현금 (4곳)",
+   "value": "115",
+   "unit": "%",
+   "status": "warn",
+   "asof": "2026-11-01",
+   "source": "MarketAnalysis AI Capex Tracker (1년 전 61%)"
+  },
+  {
+   "id": "msft_fcf",
+   "group": "빅테크",
+   "item": "마이크로소프트 분기 잉여현금",
+   "value": "186",
+   "unit": "억 달러",
+   "status": "ok",
+   "asof": "2026-11-01",
+   "source": "MarketAnalysis AI Capex Tracker"
+  },
+  {
+   "id": "goog_fcf",
+   "group": "빅테크",
+   "item": "알파벳 분기 잉여현금",
+   "value": "-91",
+   "unit": "억 달러",
+   "status": "warn",
+   "asof": "2026-11-01",
+   "source": "MarketAnalysis AI Capex Tracker"
+  },
+  {
+   "id": "amzn_fcf",
+   "group": "빅테크",
+   "item": "아마존 분기 잉여현금",
+   "value": "-335",
+   "unit": "억 달러",
+   "status": "bad",
+   "asof": "2026-11-01",
+   "source": "MarketAnalysis AI Capex Tracker"
+  },
+  {
+   "id": "meta_fcf",
+   "group": "빅테크",
+   "item": "메타 분기 잉여현금",
+   "value": "-21",
+   "unit": "억 달러",
+   "status": "warn",
+   "asof": "2026-11-01",
+   "source": "MarketAnalysis AI Capex Tracker"
+  },
+  {
+   "id": "mrvl_price",
+   "group": "마벨",
+   "item": "주가",
+   "value": "130.91",
+   "unit": "$",
+   "status": "warn",
+   "asof": "2026-11-20",
+   "source": "Finviz"
+  },
+  {
+   "id": "mrvl_high",
+   "group": "마벨",
+   "item": "고점 대비",
+   "value": "-60.3",
+   "unit": "%",
+   "status": "bad",
+   "asof": "2026-11-20",
+   "source": "Finviz (52주 최고가 $329.88)"
+  },
+  {
+   "id": "mrvl_pe_lo",
+   "group": "마벨",
+   "item": "예상 PER (낮은 추정)",
+   "value": "17.9",
+   "unit": "배",
+   "status": "ok",
+   "asof": "2026-11-20",
+   "source": "Finviz"
+  },
+  {
+   "id": "mrvl_pe_hi",
+   "group": "마벨",
+   "item": "예상 PER (높은 추정)",
+   "value": "34.5",
+   "unit": "배",
+   "status": "warn",
+   "asof": "2026-11-18",
+   "source": "Yahoo Finance (Zacks)"
+  },
+  {
+   "id": "mrvl_netdebt",
+   "group": "마벨",
+   "item": "순부채",
+   "value": "11",
+   "unit": "억 달러",
+   "status": "ok",
+   "asof": "2026-08-01",
+   "source": "Yahoo Finance (현금 39억 · 부채 50억 달러)"
+  }
+ ],
+ "sentiment": [
+  {
+   "id": "fg",
+   "item": "공포·탐욕 지수",
+   "value": "15.4",
+   "unit": "점",
+   "rating": "extreme fear",
+   "note": "1주 전 37점 · 1달 전 29점"
+  },
+  {
+   "id": "vix",
+   "item": "VIX 공포지수",
+   "value": "30.9",
+   "unit": "",
+   "rating": "extreme fear",
+   "note": "20 넘으면 불안 · 30 넘으면 공포"
+  },
+  {
+   "id": "pc",
+   "item": "풋/콜 비율",
+   "value": "0.9",
+   "unit": "",
+   "rating": "extreme fear",
+   "note": "높을수록 하락에 거는 쪽이 많음"
+  },
+  {
+   "id": "momentum",
+   "item": "S&P500 모멘텀",
+   "value": "1.2",
+   "unit": "점",
+   "rating": "extreme fear",
+   "note": "지수가 평균선 아래로 크게 내려감"
+  },
+  {
+   "id": "strength",
+   "item": "주가 강도",
+   "value": "29.2",
+   "unit": "점",
+   "rating": "fear",
+   "note": "신고가보다 신저가 종목이 많음"
+  },
+  {
+   "id": "junk",
+   "item": "정크본드 수요",
+   "value": "38",
+   "unit": "점",
+   "rating": "fear",
+   "note": "위험한 채권을 피하는 중"
+  },
+  {
+   "id": "haven",
+   "item": "안전자산 수요",
+   "value": "9",
+   "unit": "점",
+   "rating": "extreme fear",
+   "note": "주식보다 국채로 돈이 감"
+  }
+ ],
+ "stocks": [
+  {
+   "ticker": "MRVL",
+   "name": "마벨",
+   "price": "130.91",
+   "from_high": "-60.32",
+   "perf_month": "-41.42",
+   "perf_ytd": "54.05",
+   "fpe": "17.93",
+   "short_float": "2.99",
+   "inst_trans": "1.64",
+   "rsi": "29.74"
+  },
+  {
+   "ticker": "NVDA",
+   "name": "엔비디아",
+   "price": "140.91",
+   "from_high": "-42.1",
+   "perf_month": "-33.6",
+   "perf_ytd": "-24.44",
+   "fpe": "8.49",
+   "short_float": "1.21",
+   "inst_trans": "0.3",
+   "rsi": "18.26"
+  },
+  {
+   "ticker": "AVGO",
+   "name": "브로드컴",
+   "price": "335.2",
+   "from_high": "-32.28",
+   "perf_month": "3.7",
+   "perf_ytd": "-3.15",
+   "fpe": "17.35",
+   "short_float": "1.11",
+   "inst_trans": "-0.41",
+   "rsi": "48.76"
+  },
+  {
+   "ticker": "AMD",
+   "name": "AMD",
+   "price": "456.96",
+   "from_high": "-30.61",
+   "perf_month": "-10.03",
+   "perf_ytd": "113.37",
+   "fpe": "25.59",
+   "short_float": "2.37",
+   "inst_trans": "3.84",
+   "rsi": "41.53"
+  },
+  {
+   "ticker": "SMH",
+   "name": "반도체 ETF",
+   "price": "431.95",
+   "from_high": "-35.71",
+   "perf_month": "-17.46",
+   "perf_ytd": "19.94",
+   "fpe": "",
+   "short_float": "",
+   "inst_trans": "",
+   "rsi": "30.4"
+  }
+ ],
+ "macro_now": [
+  {
+   "series": "ust10",
+   "date": "2026-11-19",
+   "last": 5.05,
+   "chg1m": -0.1
+  },
+  {
+   "series": "brent",
+   "date": "2026-11-20",
+   "last": 89.32,
+   "chg1m": -21.1
+  },
+  {
+   "series": "gold",
+   "date": "2026-11-20",
+   "last": 3569.8,
+   "chg1m": -12.1
+  },
+  {
+   "series": "vix",
+   "date": "2026-11-20",
+   "last": 30.97,
+   "chg1m": 62.7
+  }
+ ],
+ "calendar": [
+  {
+   "when": "12월 1일",
+   "date": "2026-12-01",
+   "event": "마벨 실적",
+   "watch": "데이터센터 매출과 다음 분기 가이던스",
+   "good": "유지 또는 증가"
+  },
+  {
+   "when": "12월 초",
+   "date": "",
+   "event": "11월 물가(CPI)",
+   "watch": "물가가 예상보다 높은지 낮은지",
+   "good": "예상보다 낮음"
+  },
+  {
+   "when": "12월 중순",
+   "date": "",
+   "event": "연준 회의",
+   "watch": "0.25%p인지 0.5%p인지",
+   "good": "0.25%p에 곧 멈춘다는 신호"
+  },
+  {
+   "when": "계속",
+   "date": "",
+   "event": "유가",
+   "watch": "브렌트유 가격",
+   "good": "$90 아래로 안정"
+  },
+  {
+   "when": "2027년 1~2월",
+   "date": "",
+   "event": "빅테크 실적",
+   "watch": "2027년 투자 계획",
+   "good": "올해와 비슷하거나 증가"
+  }
+ ],
+ "rules": [
+  {
+   "rule": "산 이유가 깨졌나",
+   "state": "미확인",
+   "note": "해기가 산 이유를 한 줄로 적어야 판단할 수 있음"
+  },
+  {
+   "rule": "데이터센터 매출 두 분기 연속 감소",
+   "state": "아님",
+   "note": "12월 1일 실적에서 다시 확인"
+  },
+  {
+   "rule": "빅테크가 투자 축소 발표",
+   "state": "아님",
+   "note": "2027년 1~2월 빅테크 실적에서 확인"
+  },
+  {
+   "rule": "루멘텀 인수로 빚이 크게 늘어남",
+   "state": "아님",
+   "note": "인수는 전부 주식. 대신 지분이 약 67%로 희석"
+  },
+  {
+   "rule": "1~2년 안에 쓸 돈이 들어가 있나",
+   "state": "미확인",
+   "note": "해기만 알 수 있음"
+  },
+  {
+   "rule": "빌린 돈(신용·대출)으로 샀나",
+   "state": "미확인",
+   "note": "해기만 알 수 있음"
+  }
+ ],
+ "study": [
+  {
+   "priority": "1",
+   "topic": "금리와 성장주",
+   "why": "지금 하락의 가장 큰 줄기",
+   "how": "10년물 금리가 오르면 왜 미래 이익의 가치가 깎이는지(할인율)"
+  },
+  {
+   "priority": "1",
+   "topic": "잉여현금흐름 읽기",
+   "why": "빅테크가 버티는지 보는 숫자",
+   "how": "영업현금에서 투자를 뺀 값. 분기 실적표에서 직접 찾아보기"
+  },
+  {
+   "priority": "1",
+   "topic": "마벨 실적 체크리스트",
+   "why": "12월 1일에 바로 쓸 것",
+   "how": "데이터센터 매출, 다음 분기 가이던스, 맞춤 칩 고객"
+  },
+  {
+   "priority": "2",
+   "topic": "PER과 예상 PER",
+   "why": "마벨 PER이 19배도 35배도 되는 이유",
+   "how": "회계 이익(GAAP)과 조정 이익 차이도 같이"
+  },
+  {
+   "priority": "2",
+   "topic": "빚과 이자보상배율",
+   "why": "코어위브가 왜 위험한지",
+   "how": "영업이익 ÷ 이자. 1보다 작으면 번 돈으로 이자를 못 냄"
+  },
+  {
+   "priority": "2",
+   "topic": "빅테크 투자 계획(캐펙스) 읽기",
+   "why": "마벨 매출의 출발점",
+   "how": "실적 발표에서 내년 투자 계획 문장 찾기"
+  },
+  {
+   "priority": "3",
+   "topic": "주식 인수와 지분 희석",
+   "why": "루멘텀 인수가 주주에게 주는 영향",
+   "how": "기존 주주 몫이 약 67%로 줄어드는 구조"
+  },
+  {
+   "priority": "3",
+   "topic": "공매도 보고서 읽는 법",
+   "why": "AMD처럼 하루에 8% 빠지게 만듦",
+   "how": "주장과 확인된 사실을 나눠 보기"
+  }
+ ]
+}
