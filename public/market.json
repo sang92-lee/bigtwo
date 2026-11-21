@@ -1,10 +1,10 @@
 {
- "updated": "2026-11-20T23:03+09:00",
+ "updated": "2026-11-21T12:13+09:00",
  "alert": {
-  "score": 53,
+  "score": 50,
   "level": "경계",
-  "bad": 6,
-  "warn": 7,
+  "bad": 5,
+  "warn": 8,
   "ok": 5
  },
  "checks": [
@@ -32,10 +32,10 @@
    "id": "ust10",
    "group": "금리",
    "item": "미국 10년물 국채",
-   "value": "5.05",
+   "value": "4.91",
    "unit": "%",
-   "status": "bad",
-   "asof": "2026-11-20",
+   "status": "warn",
+   "asof": "2026-11-21",
    "source": "Yahoo Finance (^TNX)"
   },
   {
@@ -52,10 +52,10 @@
    "id": "brent",
    "group": "유가",
    "item": "브렌트유",
-   "value": "89.32",
+   "value": "89.87",
    "unit": "$",
    "status": "ok",
-   "asof": "2026-11-20",
+   "asof": "2026-11-21",
    "source": "Yahoo Finance (BZ=F)"
   },
   {
@@ -142,30 +142,30 @@
    "id": "mrvl_price",
    "group": "마벨",
    "item": "주가",
-   "value": "132.2",
+   "value": "122.28",
    "unit": "$",
    "status": "warn",
-   "asof": "2026-11-20",
+   "asof": "2026-11-21",
    "source": "Finviz"
   },
   {
    "id": "mrvl_high",
    "group": "마벨",
    "item": "고점 대비",
-   "value": "-59.92",
+   "value": "-62.93",
    "unit": "%",
    "status": "bad",
-   "asof": "2026-11-20",
+   "asof": "2026-11-21",
    "source": "Finviz (52주 최고가 $329.88)"
   },
   {
    "id": "mrvl_pe_lo",
    "group": "마벨",
    "item": "예상 PER (낮은 추정)",
-   "value": "18.1",
+   "value": "16.74",
    "unit": "배",
    "status": "ok",
-   "asof": "2026-11-20",
+   "asof": "2026-11-21",
    "source": "Finviz"
   },
   {
@@ -193,7 +193,7 @@
   {
    "id": "fg",
    "item": "공포·탐욕 지수",
-   "value": "14.5",
+   "value": "9.7",
    "unit": "점",
    "rating": "extreme fear",
    "note": "1주 전 37점 · 1달 전 29점"
@@ -201,7 +201,7 @@
   {
    "id": "vix",
    "item": "VIX 공포지수",
-   "value": "31.23",
+   "value": "35.89",
    "unit": "",
    "rating": "extreme fear",
    "note": "20 넘으면 불안 · 30 넘으면 공포"
@@ -217,7 +217,7 @@
   {
    "id": "momentum",
    "item": "S&P500 모멘텀",
-   "value": "1.2",
+   "value": "0.2",
    "unit": "점",
    "rating": "extreme fear",
    "note": "지수가 평균선 아래로 크게 내려감"
@@ -225,7 +225,7 @@
   {
    "id": "strength",
    "item": "주가 강도",
-   "value": "29.2",
+   "value": "27.2",
    "unit": "점",
    "rating": "fear",
    "note": "신고가보다 신저가 종목이 많음"
@@ -233,15 +233,15 @@
   {
    "id": "junk",
    "item": "정크본드 수요",
-   "value": "38",
+   "value": "16.2",
    "unit": "점",
-   "rating": "fear",
+   "rating": "extreme fear",
    "note": "위험한 채권을 피하는 중"
   },
   {
    "id": "haven",
    "item": "안전자산 수요",
-   "value": "9",
+   "value": "0.8",
    "unit": "점",
    "rating": "extreme fear",
    "note": "주식보다 국채로 돈이 감"
@@ -251,88 +251,88 @@
   {
    "ticker": "MRVL",
    "name": "마벨",
-   "price": "132.2",
-   "from_high": "-59.92",
-   "perf_month": "-40.84",
-   "perf_ytd": "55.57",
-   "fpe": "18.1",
+   "price": "122.28",
+   "from_high": "-62.93",
+   "perf_month": "-45.28",
+   "perf_ytd": "43.89",
+   "fpe": "16.74",
    "short_float": "2.99",
    "inst_trans": "1.64",
-   "rsi": "30.04"
+   "rsi": "27.9"
   },
   {
    "ticker": "NVDA",
    "name": "엔비디아",
-   "price": "142.67",
-   "from_high": "-41.38",
-   "perf_month": "-32.77",
-   "perf_ytd": "-23.5",
-   "fpe": "8.6",
+   "price": "125.53",
+   "from_high": "-48.42",
+   "perf_month": "-40.85",
+   "perf_ytd": "-32.69",
+   "fpe": "7.56",
    "short_float": "1.21",
    "inst_trans": "0.3",
-   "rsi": "18.72"
+   "rsi": "15.05"
   },
   {
    "ticker": "AVGO",
    "name": "브로드컴",
-   "price": "340.75",
-   "from_high": "-31.16",
-   "perf_month": "5.42",
-   "perf_ytd": "-1.55",
-   "fpe": "17.63",
+   "price": "304.41",
+   "from_high": "-38.5",
+   "perf_month": "-5.83",
+   "perf_ytd": "-12.05",
+   "fpe": "15.75",
    "short_float": "1.11",
    "inst_trans": "-0.41",
-   "rsi": "50.53"
+   "rsi": "40.84"
   },
   {
    "ticker": "AMD",
    "name": "AMD",
-   "price": "467.52",
-   "from_high": "-29.0",
-   "perf_month": "-7.96",
-   "perf_ytd": "118.3",
-   "fpe": "26.18",
+   "price": "424.39",
+   "from_high": "-35.55",
+   "perf_month": "-16.45",
+   "perf_ytd": "98.16",
+   "fpe": "23.77",
    "short_float": "2.37",
    "inst_trans": "3.84",
-   "rsi": "42.65"
+   "rsi": "38.42"
   },
   {
    "ticker": "SMH",
    "name": "반도체 ETF",
-   "price": "436.96",
-   "from_high": "-34.96",
-   "perf_month": "-16.51",
-   "perf_ytd": "21.33",
+   "price": "400.06",
+   "from_high": "-40.45",
+   "perf_month": "-23.56",
+   "perf_ytd": "11.09",
    "fpe": "",
    "short_float": "",
    "inst_trans": "",
-   "rsi": "31.2"
+   "rsi": "26.13"
   }
  ],
  "macro_now": [
   {
    "series": "ust10",
-   "date": "2026-11-19",
-   "last": 5.05,
-   "chg1m": -0.1
+   "date": "2026-11-20",
+   "last": 4.91,
+   "chg1m": -0.04
   },
   {
    "series": "brent",
    "date": "2026-11-20",
-   "last": 89.32,
-   "chg1m": -21.1
+   "last": 89.87,
+   "chg1m": -20.6
   },
   {
    "series": "gold",
    "date": "2026-11-20",
-   "last": 3569.8,
-   "chg1m": -12.1
+   "last": 3539.0,
+   "chg1m": -12.8
   },
   {
    "series": "vix",
    "date": "2026-11-20",
-   "last": 30.97,
-   "chg1m": 62.7
+   "last": 35.89,
+   "chg1m": 88.6
   }
  ],
  "calendar": [
@@ -1017,6 +1017,10 @@
    [
     "2026-11-19",
     5.05
+   ],
+   [
+    "2026-11-20",
+    4.91
    ]
   ],
   "brent": [
@@ -1534,7 +1538,7 @@
    ],
    [
     "2026-11-20",
-    89.32
+    89.87
    ]
   ],
   "gold": [
@@ -2052,7 +2056,7 @@
    ],
    [
     "2026-11-20",
-    3569.8
+    3539.0
    ]
   ],
   "vix": [
@@ -2578,7 +2582,7 @@
    ],
    [
     "2026-11-20",
-    30.97
+    35.89
    ]
   ]
  }
