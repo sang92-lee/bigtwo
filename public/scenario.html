@@ -190,6 +190,14 @@ td.wrapc{white-space:normal;min-width:12em}
   </section>
 
   <section class="px">
+    <h2>REAL DATA <b>지금처럼 급락·급공포였던 9번과 3개월 뒤</b></h2>
+    <div class="tw"><table><thead><tr><th>이번 하락</th><th>고점 대비</th><th>1주</th><th>1달</th></tr></thead><tbody id="drop"></tbody></table></div>
+    <div class="tw" style="margin-top:16px"><table><thead><tr id="anh"></tr></thead><tbody id="anb"></tbody></table></div>
+    <ol class="lessons" id="ans"></ol>
+    <p class="sub" style="font-size:12px" id="anc"></p>
+  </section>
+
+  <section class="px">
     <h2>HISTORY <b>공포 뒤에 무슨 일이 있었나</b></h2>
     <div class="tw"><table><thead><tr><th>언제</th><th>무슨 일</th><th>공포 크기</th><th>금리</th><th>그 뒤</th></tr></thead><tbody id="hist"></tbody></table></div>
     <ol class="lessons" id="lessons"></ol>
@@ -248,6 +256,15 @@ async function get(u){ const r = await fetch(u + '?t=' + Date.now()); if (!r.ok)
     else { const on = g.state === 'on'; led = on ? 'warn' : ''; tag = on ? '<span class="tag c-warn">켜짐</span>' : g.state === 'off' ? '<span class="tag c-dim">아님</span>' : '<span class="tag c-blue">대기</span>'; }
     return `<div class="sig"><i class="led ${led}"></i><b>${esc(g.label)}</b>${tag}<small>→ ${esc(g.effect)}${esc(now)}</small></div>`;
   }).join('');
+  // 실제 데이터 9번
+  const cl = x => /^\+/.test(x) ? 'c-ok' : /^-/.test(x) ? 'c-bad' : '';
+  if (s.analogs) { const a = s.analogs;
+    $('drop').innerHTML = a.drop.map(r => `<tr><td>${esc(r[0])}</td><td class="c-bad">${esc(r[1])}</td><td class="c-bad">${esc(r[2])}</td><td class="c-bad">${esc(r[3])}</td></tr>`).join('');
+    $('anh').innerHTML = a.cols.map(c => `<th>${esc(c)}</th>`).join('');
+    $('anb').innerHTML = `<tr class="me">${a.now.map((x, i) => `<td${i >= 5 ? ' class="c-warn"' : ''}>${esc(x)}</td>`).join('')}</tr>` +
+      a.rows.map(r => `<tr>${r.map((x, i) => `<td class="${i >= 5 ? cl(x) : ''}">${esc(x)}</td>`).join('')}</tr>`).join('');
+    $('ans').innerHTML = a.summary.map(x => `<li>${esc(x)}</li>`).join('');
+    $('anc').textContent = a.criteria; }
   // 과거
   $('hist').innerHTML = s.history.map(h => `<tr><td>${esc(h[0])}</td><td class="wrapc">${esc(h[1])}</td><td class="wrapc">${esc(h[2])}</td><td class="wrapc">${esc(h[3])}</td><td class="wrapc c-${h[5]}">${esc(h[4])}</td></tr>`).join('');
   $('lessons').innerHTML = s.lessons.map(x => `<li>${esc(x)}</li>`).join('');
