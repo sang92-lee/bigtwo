@@ -114,7 +114,19 @@ a{color:inherit}
 .gauge .n b{font:700 24px var(--px)}
 .gauge .n span{font:12px var(--mono)}
 .gauge canvas{width:100%;height:72px;image-rendering:pixelated;display:block}
-.gauge p{margin:8px 0 0;font-size:12.5px;color:var(--dim);line-height:1.55}
+.gauge p{margin:10px 0 0;font-size:14px;color:var(--sub);line-height:1.6}
+/* 접는 칸 */
+details.px{padding:0}
+details.px>summary{list-style:none;cursor:pointer;padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto 14px;gap:10px;align-items:center}
+details.px>summary::-webkit-details-marker{display:none}
+details.px>summary h2{margin:0}
+details.px>summary .verdict{font:700 15px var(--read);white-space:nowrap}
+details.px>summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);margin-top:-4px;transition:transform .2s;grid-row:1;grid-column:3}
+details.px[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+details.px>summary .why{grid-column:1/-1;font-size:13.5px;color:var(--dim);margin-top:-2px}
+details.px .body{padding:0 18px 12px}
+.link2{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:var(--dim);border-left:2px solid var(--line2);padding-left:10px}
+.link2 b{color:var(--sub);font-weight:600}
 /* 종목 */
 .stk{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:14px 0;border-top:1px solid var(--line)}
 .stk:first-of-type{border-top:0;padding-top:4px}
@@ -189,6 +201,7 @@ footer a{color:var(--dim)}
     <div>
       <p class="msg" id="msg"></p>
       <div class="split"><div>나쁨<b class="c-bad" id="nbad">—</b></div><div>주의<b class="c-warn" id="nwarn">—</b></div><div>괜찮음<b class="c-ok" id="nok">—</b></div></div>
+      <p class="link2" id="link2"></p>
     </div>
   </section>
 
@@ -311,6 +324,12 @@ function render(d) {
 
   // 공포탐욕
   if (fgRow) {
+    const f0 = (FG[fgRow.rating] || [fgRow.rating])[0], lk = $('link2'); lk.replaceChildren();
+    lk.append(el('b', null, '경보 ' + a.score + '점'), document.createTextNode(' = 금리·유가·빚·실적 같은 실제 지표 ' + (a.bad + a.warn + a.ok) + '개. '),
+      el('b', null, '공포·탐욕 ' + num(fgRow.value, 1)), document.createTextNode(' = 사람들 마음(' + f0 + '). '),
+      document.createTextNode(+fgRow.value < 25 && a.level !== '심각' ? '지표보다 마음이 더 얼어 있어요.' : +fgRow.value > 75 ? '지표보다 마음이 더 들떠 있어요.' : '마음과 지표가 비슷하게 가요.'));
+  }
+  if (fgRow) {
     const f = FG[fgRow.rating] || [fgRow.rating, C.fg, ''], v = +fgRow.value;
     $('fear').style.setProperty('--fgc', f[1]);
     $('fgn').textContent = num(v, 1); $('fgr').textContent = f[0]; $('fgp').textContent = fgRow.note || '';
@@ -356,8 +375,15 @@ function render(d) {
   $('sectors').replaceChildren(...groups.map(([g, en]) => {
     const items = d.checks.filter((c) => c.group === g);
     const worst = items.reduce((w, c) => (rank[c.status] > rank[w] ? c.status : w), 'ok');
-    const sec = el('section', 'px'); const h = el('h2'); h.append(el('i', 'led ' + worst), document.createTextNode(en), el('b', null, g)); sec.append(h);
-    for (const c of items) { const row = el('div', 'ck'); const st = ST[c.status] || ['', 'c-dim']; row.append(el('i', 'led ' + c.status), el('span', null, c.item), el('b', st[1], fmt(c))); row.title = st[0] + ' · ' + (c.source || ''); sec.append(row); }
+    const sec = el('details', 'px'); const sm = el('summary'); const h = el('h2'); h.append(el('i', 'led ' + worst), document.createTextNode(en + ' · ' + g)); sm.append(h);
+    const nb = items.filter((c) => c.status === 'bad').length, nw = items.filter((c) => c.status === 'warn').length;
+    const vd = {ok: ['괜찮음', 'c-ok'], warn: ['지켜보기', 'c-warn'], bad: ['조심', 'c-bad']}[worst];
+    sm.append(el('span', 'verdict ' + vd[1], vd[0]));
+    const top = items.find((c) => c.status === worst) || items[0];
+    sm.append(el('span', 'why', (nb || nw) ? items.length + '개 중 ' + [nb ? '나쁨 ' + nb : '', nw ? '주의 ' + nw : ''].filter(Boolean).join(' · ') + ' — ' + top.item + ' ' + fmt(top) : items.length + '개 모두 괜찮음'));
+    sec.append(sm); const body = el('div', 'body');
+    for (const c of items) { const row = el('div', 'ck'); const st = ST[c.status] || ['', 'c-dim']; row.append(el('i', 'led ' + c.status), el('span', null, c.item), el('b', st[1], fmt(c))); row.title = st[0] + ' · ' + (c.source || ''); body.append(row); }
+    sec.append(body);
     return sec;
   }));
 
