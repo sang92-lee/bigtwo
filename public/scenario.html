@@ -112,6 +112,19 @@ footer a{color:var(--dim)}
 @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .golink{display:flex;gap:14px;align-items:center;text-decoration:none;color:var(--fg);border-color:var(--warn);box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--warn),8px 8px 0 6px #000}
 .golink b{font-size:17px;flex:1}.golink .arr{color:var(--warn);font-size:20px}.golink:hover{background:var(--panel2)}
+/* 읽기 편하게 (2026-11-21): 긴 글은 일반 글꼴, 픽셀 글꼴은 큰 숫자·제목만, 줄무늬 제거, 흐린 글자 밝게, 작은 글자 키움 */
+:root{--dim:#a9c2d3;--read:"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif}
+body{font-family:var(--read);font-size:15.5px;line-height:1.7;-webkit-font-smoothing:antialiased}
+body::after{display:none}
+.px h2,.lab,.bar,th,footer,.fgp,.meta{font-family:var(--read);letter-spacing:.02em}
+.px h2{font-size:13px}.px h2 b{font-size:16px}
+.lab,.bar,.fgp{font-size:13px}
+th{font-size:12.5px}td{font-family:var(--read);font-size:14.5px}
+td:first-child{font-family:var(--read)}
+.gauge p,.risk small,.list .it span.d{font-size:13.5px;line-height:1.6}
+.tag{font-size:12px}footer{font-size:12.5px}
+.msg{font-size:17px;line-height:1.65}
+.list .it b{font-size:15px}.golink b{font-size:17px}
 :focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
 </style>
 <style>
