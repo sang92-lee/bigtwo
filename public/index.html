@@ -113,6 +113,8 @@ footer a{color:var(--dim)}
 }
 @keyframes blink{50%{opacity:.25}}
 @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.golink{display:flex;gap:14px;align-items:center;text-decoration:none;color:var(--fg);border-color:var(--warn);box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--warn),8px 8px 0 6px #000}
+.golink b{font-size:17px;flex:1}.golink .arr{color:var(--warn);font-size:20px}.golink:hover{background:var(--panel2)}
 :focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
 </style>
 </head>
@@ -136,6 +138,8 @@ footer a{color:var(--dim)}
   </section>
 
   <div class="ticker" aria-label="주요 숫자"><div class="track" id="ticker"></div></div>
+
+  <a class="px golink" href="scenario.html"><span class="lab">SCENARIO</span><b>마벨 앞으로 시나리오 · 확률 · 신호</b><span class="arr">▶</span></a>
 
   <div class="grid">
     <section class="px" id="fear">
